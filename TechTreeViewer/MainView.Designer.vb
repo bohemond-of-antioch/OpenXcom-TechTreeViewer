@@ -31,6 +31,8 @@ Partial Class MainView
         Me.ProgramMenu = New System.Windows.Forms.MenuStrip()
         Me.FileToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.NewToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.RecentToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.ExampleFileToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.ToolStripMenuItem1 = New System.Windows.Forms.ToolStripSeparator()
         Me.OpenFileToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.SaveToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
@@ -52,8 +54,6 @@ Partial Class MainView
         Me.ToolStripMenuItem2 = New System.Windows.Forms.ToolStripSeparator()
         Me.MenuEditNodeRemove = New System.Windows.Forms.ToolStripMenuItem()
         Me.SortTimer = New System.Windows.Forms.Timer(Me.components)
-        Me.RecentToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
-        Me.ExampleFileToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.MenuNewNode.SuspendLayout()
         Me.ProgramMenu.SuspendLayout()
         Me.MenuEditNode.SuspendLayout()
@@ -112,6 +112,19 @@ Partial Class MainView
         Me.NewToolStripMenuItem.ShortcutKeys = CType((System.Windows.Forms.Keys.Control Or System.Windows.Forms.Keys.N), System.Windows.Forms.Keys)
         Me.NewToolStripMenuItem.Size = New System.Drawing.Size(164, 22)
         Me.NewToolStripMenuItem.Text = "New"
+        '
+        'RecentToolStripMenuItem
+        '
+        Me.RecentToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ExampleFileToolStripMenuItem})
+        Me.RecentToolStripMenuItem.Name = "RecentToolStripMenuItem"
+        Me.RecentToolStripMenuItem.Size = New System.Drawing.Size(164, 22)
+        Me.RecentToolStripMenuItem.Text = "Recent"
+        '
+        'ExampleFileToolStripMenuItem
+        '
+        Me.ExampleFileToolStripMenuItem.Name = "ExampleFileToolStripMenuItem"
+        Me.ExampleFileToolStripMenuItem.Size = New System.Drawing.Size(130, 22)
+        Me.ExampleFileToolStripMenuItem.Text = "ExampleFile"
         '
         'ToolStripMenuItem1
         '
@@ -240,19 +253,6 @@ Partial Class MainView
         '
         Me.SortTimer.Interval = 20
         '
-        'RecentToolStripMenuItem
-        '
-        Me.RecentToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ExampleFileToolStripMenuItem})
-        Me.RecentToolStripMenuItem.Name = "RecentToolStripMenuItem"
-        Me.RecentToolStripMenuItem.Size = New System.Drawing.Size(164, 22)
-        Me.RecentToolStripMenuItem.Text = "Recent"
-        '
-        'ExampleFileToolStripMenuItem
-        '
-        Me.ExampleFileToolStripMenuItem.Name = "ExampleFileToolStripMenuItem"
-        Me.ExampleFileToolStripMenuItem.Size = New System.Drawing.Size(152, 22)
-        Me.ExampleFileToolStripMenuItem.Text = "ExampleFile"
-        '
         'MainView
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
@@ -263,6 +263,7 @@ Partial Class MainView
         Me.MainMenuStrip = Me.ProgramMenu
         Me.Name = "MainView"
         Me.Text = "Graph"
+        Me.WindowState = System.Windows.Forms.FormWindowState.Maximized
         Me.MenuNewNode.ResumeLayout(False)
         Me.ProgramMenu.ResumeLayout(False)
         Me.ProgramMenu.PerformLayout()

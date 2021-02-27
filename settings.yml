@@ -24,8 +24,8 @@ colors:
     sequentialGetOneFree: Green
     unlocks: DarkGreen
   graph:
-    #background: Black
-    #text: White
+    #background: White
+    text: Black
 qualityOfLife:
   removePrefixes:
     - STR_

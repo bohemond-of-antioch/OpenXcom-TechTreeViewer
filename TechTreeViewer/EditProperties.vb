@@ -54,6 +54,7 @@
                 GridProperties.Rows.Item(Index).Cells.Item(2).ReadOnly = True
             End If
         Next
+        GridProperties.AutoResizeColumns()
 
     End Sub
 

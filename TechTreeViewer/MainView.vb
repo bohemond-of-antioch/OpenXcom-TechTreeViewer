@@ -499,7 +499,13 @@ Public Class MainView
             End If
         End If
     End Sub
-
+    Private Sub StartImportXComResearch(Path As String)
+        Hl.ImportXComResearch(Path)
+        Hl.ChangesSaved = False
+        Call UpdateTitle()
+        Call CenterAndZoomToGraph()
+        Me.Refresh()
+    End Sub
     Private Sub OpenGraphFile(FileName As String)
         Dim File As System.IO.BinaryReader = New System.IO.BinaryReader(System.IO.File.Open(FileName, IO.FileMode.Open))
         Hl.Initialize()
@@ -507,10 +513,11 @@ Public Class MainView
         Hl.Graph.Load(File)
         Hl.TemplateStorage.Load(File)
         File.Close()
-        Me.Refresh()
         Hl.CurrentGraphFileName = FileName
         Hl.ChangesSaved = True
         Call UpdateTitle()
+        Call CenterAndZoomToGraph()
+        Me.Refresh()
     End Sub
 
     Private Sub SaveToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles SaveToolStripMenuItem.Click
@@ -586,10 +593,7 @@ Public Class MainView
             Case ERecentItemAction.ImportXComResearch
                 If Not CheckUnsavedFile() Then Exit Sub
                 Dim Path = RecentItems(Index).FileName
-                Hl.ImportXComResearch(Path)
-                Me.Refresh()
-                Hl.ChangesSaved = False
-                Call UpdateTitle()
+                StartImportXComResearch(Path)
             Case ERecentItemAction.Open
                 If Not CheckUnsavedFile() Then Exit Sub
                 Dim Path = RecentItems(Index).FileName
@@ -641,10 +645,7 @@ Public Class MainView
         If Not CheckUnsavedFile() Then Exit Sub
         If OpenFolderDialog.ShowDialog() = DialogResult.OK Then
             Dim Path = OpenFolderDialog.SelectedPath
-            Hl.ImportXComResearch(Path)
-            Me.Refresh()
-            Hl.ChangesSaved = False
-            Call UpdateTitle()
+            StartImportXComResearch(Path)
         End If
     End Sub
 
@@ -668,4 +669,21 @@ Public Class MainView
     Private Sub FileToolStripMenuItem_DropDownOpened(sender As Object, e As EventArgs) Handles FileToolStripMenuItem.DropDownOpened
         RebuildRecent()
     End Sub
+
+    Private Sub CenterAndZoomToGraph()
+        Dim Center As PointF
+        Center.X = 0
+        Center.Y = 0
+        For Each Node As CGraph.CNode In Graph
+            Center.X += Node.DisplayProperties.Position.X
+            Center.Y += Node.DisplayProperties.Position.Y
+        Next Node
+        If Graph.Nodes.Count > 0 Then
+            Center.X = Center.X / Graph.Nodes.Count
+            Center.Y = Center.Y / Graph.Nodes.Count
+        End If
+        UI.ScrollX = Me.Width / 2 - Center.X
+        UI.ScrollY = Me.Height / 2 - Center.Y
+    End Sub
+
 End Class
