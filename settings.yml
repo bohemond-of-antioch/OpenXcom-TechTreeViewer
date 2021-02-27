@@ -1,0 +1,40 @@
+colors:
+  sections:
+    STR_NOT_AVAILABLE: Red
+    STR_ALIEN_ARTIFACTS: CornflowerBlue
+    STR_NATURAL_SCIENCE: ForestGreen
+    STR_CAPTAIN_LOG: Lavender
+    STR_ALIEN_LIFE_FORMS: GreenYellow
+    STR_ALIEN_RESEARCH_UC: Yellow
+    STR_BASE_FACILITIES: Beige
+    STR_BASIC_RESEARCH: FloralWhite
+    STR_HEAVY_WEAPONS_PLATFORMS: Crimson
+    STR_UFOS: SkyBlue
+    STR_UFO_COMPONENTS: Olive
+    STR_UNDEFINED: Gray
+    UNDEFINED: Gray
+    STR_WEAPONS_AND_EQUIPMENT: Brown
+    STR_XCOM_CRAFT_ARMAMENT: Purple
+  connections:
+    lookup: LightCyan
+    dependencies: Blue
+    requires: Red
+    getOneFree: Green
+    getOneFreeProtected: Green
+    sequentialGetOneFree: Green
+    unlocks: DarkGreen
+  graph:
+    #background: Black
+    #text: White
+qualityOfLife:
+  removePrefixes:
+    - STR_
+sort:
+  initialIterations: 50
+  attractors:
+    pullPower: 2.5
+    pullConstant: 0.001
+    pushPower: 3
+    pushConstant: 20000000
+    clusterPower: 1.1
+    clusterConstant: 0.0001
