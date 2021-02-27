@@ -478,6 +478,7 @@ Public Class MainView
             File = New System.IO.BinaryWriter(System.IO.File.Open(FileName, IO.FileMode.OpenOrCreate))
             Hl.Graph.Save(File)
             Hl.TemplateStorage.Save(File)
+            Hl.AddRecentItem(FileName, ERecentItemAction.Open)
             File.Close()
             Hl.CurrentGraphFileName = FileName
             Hl.ChangesSaved = True
@@ -494,19 +495,22 @@ Public Class MainView
             If (OpenFileDialog.ShowDialog(Me) = System.Windows.Forms.DialogResult.OK) Then
                 Dim FileName As String
                 FileName = OpenFileDialog.FileName
-                Dim File As System.IO.BinaryReader
-                File = New System.IO.BinaryReader(System.IO.File.Open(FileName, IO.FileMode.Open))
-                Hl.Initialize()
-                Hl.AddRecentItem(FileName, ERecentItemAction.Open)
-                Hl.Graph.Load(File)
-                Hl.TemplateStorage.Load(File)
-                File.Close()
-                Me.Refresh()
-                Hl.CurrentGraphFileName = FileName
-                Hl.ChangesSaved = True
-                Call UpdateTitle()
+                OpenGraphFile(FileName)
             End If
         End If
+    End Sub
+
+    Private Sub OpenGraphFile(FileName As String)
+        Dim File As System.IO.BinaryReader = New System.IO.BinaryReader(System.IO.File.Open(FileName, IO.FileMode.Open))
+        Hl.Initialize()
+        Hl.AddRecentItem(FileName, ERecentItemAction.Open)
+        Hl.Graph.Load(File)
+        Hl.TemplateStorage.Load(File)
+        File.Close()
+        Me.Refresh()
+        Hl.CurrentGraphFileName = FileName
+        Hl.ChangesSaved = True
+        Call UpdateTitle()
     End Sub
 
     Private Sub SaveToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles SaveToolStripMenuItem.Click
@@ -515,6 +519,7 @@ Public Class MainView
             File = New System.IO.BinaryWriter(System.IO.File.Open(Hl.CurrentGraphFileName, IO.FileMode.OpenOrCreate))
             Hl.Graph.Save(File)
             Hl.TemplateStorage.Save(File)
+            Hl.AddRecentItem(Hl.CurrentGraphFileName, ERecentItemAction.Open)
             File.Close()
             Hl.ChangesSaved = True
             Call UpdateTitle()
@@ -586,7 +591,9 @@ Public Class MainView
                 Hl.ChangesSaved = False
                 Call UpdateTitle()
             Case ERecentItemAction.Open
-                Throw New NotImplementedException
+                If Not CheckUnsavedFile() Then Exit Sub
+                Dim Path = RecentItems(Index).FileName
+                OpenGraphFile(Path)
         End Select
     End Sub
 
