@@ -54,6 +54,7 @@ Partial Class MainView
         Me.ToolStripMenuItem2 = New System.Windows.Forms.ToolStripSeparator()
         Me.MenuEditNodeRemove = New System.Windows.Forms.ToolStripMenuItem()
         Me.SortTimer = New System.Windows.Forms.Timer(Me.components)
+        Me.KeyScrollTimer = New System.Windows.Forms.Timer(Me.components)
         Me.MenuNewNode.SuspendLayout()
         Me.ProgramMenu.SuspendLayout()
         Me.MenuEditNode.SuspendLayout()
@@ -253,6 +254,11 @@ Partial Class MainView
         '
         Me.SortTimer.Interval = 20
         '
+        'KeyScrollTimer
+        '
+        Me.KeyScrollTimer.Enabled = True
+        Me.KeyScrollTimer.Interval = 10
+        '
         'MainView
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
@@ -304,4 +310,5 @@ Partial Class MainView
     Friend WithEvents ToolStripMenuItem4 As ToolStripSeparator
     Friend WithEvents RecentToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents ExampleFileToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents KeyScrollTimer As Timer
 End Class

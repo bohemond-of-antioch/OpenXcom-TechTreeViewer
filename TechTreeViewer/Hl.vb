@@ -636,7 +636,7 @@ ZaTo:
                 Dim LocalForce As PointF
                 Dim SortWeight As Double = 1
                 If Not Connection.GetProperty("SortWeight") Is Nothing Then
-                    Dim Weight As Double = Val(Connection.GetProperty("SortWeight"))
+                    Dim Weight As Double = Math.Min(200, Val(Connection.GetProperty("SortWeight")))
                     SortWeight = (Weight / 100.0)
                 End If
 

@@ -17,6 +17,8 @@ Public Class MainView
         Dim ConnectState As EOperationState
         Dim ConnectNodeA As CGraph.CNode
         Friend LastUsedTemplate As CPropertyTemplate
+        Friend KeyScrollY As Integer
+        Friend KeyScrollX As Integer
     End Structure
 
 
@@ -327,7 +329,34 @@ Public Class MainView
         Me.Refresh()
     End Sub
 
+    Private Sub MainView_KeyDown(sender As Object, e As KeyEventArgs) Handles Me.KeyDown
+        If e.KeyCode = Keys.Down Then
+            UI.KeyScrollY = -1
+        End If
+        If e.KeyCode = Keys.Up Then
+            UI.KeyScrollY = 1
+        End If
+        If e.KeyCode = Keys.Left Then
+            UI.KeyScrollX = 1
+        End If
+        If e.KeyCode = Keys.Right Then
+            UI.KeyScrollX = -1
+        End If
+    End Sub
+
     Private Sub MainView_KeyUp(sender As Object, e As KeyEventArgs) Handles Me.KeyUp
+        If e.KeyCode = Keys.Down Then
+            UI.KeyScrollY = 0
+        End If
+        If e.KeyCode = Keys.Up Then
+            UI.KeyScrollY = 0
+        End If
+        If e.KeyCode = Keys.Left Then
+            UI.KeyScrollX = 0
+        End If
+        If e.KeyCode = Keys.Right Then
+            UI.KeyScrollX = 0
+        End If
         If e.KeyCode = Keys.Escape Then
             If UI.ConnectState = EOperationState.Active Then
                 UI.ConnectState = EOperationState.Off
@@ -686,4 +715,15 @@ Public Class MainView
         UI.ScrollY = Me.Height / 2 - Center.Y
     End Sub
 
+    Private Sub KeyScrollTimer_Tick(sender As Object, e As EventArgs) Handles KeyScrollTimer.Tick
+        If UI.KeyScrollX <> 0 Then
+            UI.ScrollX += UI.KeyScrollX * 10
+        End If
+        If UI.KeyScrollY <> 0 Then
+            UI.ScrollY += UI.KeyScrollY * 10
+        End If
+        If UI.KeyScrollX <> 0 Or UI.KeyScrollY <> 0 Then
+            Me.Refresh()
+        End If
+    End Sub
 End Class
