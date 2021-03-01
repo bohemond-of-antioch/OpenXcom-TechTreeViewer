@@ -20,6 +20,7 @@ Module XComResearchImport
 
     Public Function LoadResearch(GamePath As String, ActiveMods As List(Of String)) As List(Of CXComResearch)
         LoadMods(GamePath, ActiveMods)
+        ImportProgress.SetProgressBar(AllModNodes.Count, "Parsing research")
         Dim AllResearch As Dictionary(Of String, CXComResearch) = New Dictionary(Of String, CXComResearch)
         For Each ModRootNode In AllModNodes
             If Not ModRootNode Is Nothing AndAlso ModRootNode.HasMapping("research") Then
@@ -67,6 +68,7 @@ Module XComResearchImport
                     End If
                 Next
             End If
+            ImportProgress.ImportProgressBar.PerformStep()
         Next ModRootNode
         Return AllResearch.Values.ToList()
     End Function
@@ -80,20 +82,43 @@ Module XComResearchImport
         AllMods.AddRange(UserMods)
 
         AllModNodes = New List(Of YamlNode)
-
+        ImportProgress.SetProgressBar(1, "Parsing rules")
+        REM Count what we need to load
+        Dim FilesToParse As Integer = 0
         For Each SearchMod In ActiveMods
             For Each GameModPath In AllMods
                 Dim GameModId = Path.GetFileName(GameModPath)
+                Dim ModMetadata = New YamlFileParser(GameModPath + "\metadata.yml").Parse()
+                If ModMetadata.HasMapping("id") Then
+                    GameModId = ModMetadata.GetMapping("id").GetValue()
+                End If
                 If GameModId.ToLower() = SearchMod.ToLower() Then
-                    Dim ModMetadata = New YamlFileParser(GameModPath + "\metadata.yml").Parse()
+                    Dim IsMaster = ModMetadata.GetMapping("isMaster", "false").GetValue()
+                    Dim Master = ModMetadata.GetMapping("master", "").GetValue()
+                    If IsMaster.ToLower() = "true" OrElse ActiveMods.Contains(Master) Then
+                        FilesToParse += CountModRules(GameModPath)
+                    End If
+                End If
+            Next GameModPath
+        Next SearchMod
+        ImportProgress.SetProgressBar(FilesToParse, "Parsing rules")
+        REM Now we parse
+        For Each SearchMod In ActiveMods
+            For Each GameModPath In AllMods
+                Dim GameModId = Path.GetFileName(GameModPath)
+                Dim ModMetadata = New YamlFileParser(GameModPath + "\metadata.yml").Parse()
+                If ModMetadata.HasMapping("id") Then
+                    GameModId = ModMetadata.GetMapping("id").GetValue()
+                End If
+                If GameModId.ToLower() = SearchMod.ToLower() Then
                     Dim IsMaster = ModMetadata.GetMapping("isMaster", "false").GetValue()
                     Dim Master = ModMetadata.GetMapping("master", "").GetValue()
                     If IsMaster.ToLower() = "true" OrElse ActiveMods.Contains(Master) Then
                         ImportMod(GameModPath)
                     End If
                 End If
-            Next
-        Next
+            Next GameModPath
+        Next SearchMod
     End Sub
 
     Private Function FindUfopaediaArticle(AllModNodes As List(Of YamlNode), Name As String) As YamlNode
@@ -132,11 +157,34 @@ Module XComResearchImport
         GetConnectedResearch = New List(Of String)
         If Node.HasMapping(Key) Then
             Dim ConnectedNode = Node.GetMapping(Key)
-            For d = 0 To ConnectedNode.ItemCount - 1
-                GetConnectedResearch.Add(ConnectedNode.GetItem(d).GetValue())
-            Next d
+            If ConnectedNode.Type = YamlNode.EType.Sequence Then
+                For d = 0 To ConnectedNode.ItemCount - 1
+                    GetConnectedResearch.Add(ConnectedNode.GetItem(d).GetValue())
+                Next d
+            ElseIf ConnectedNode.Type = YamlNode.EType.Mapping Then
+                For Each ResearchID In ConnectedNode.GetMappingKeys()
+                    GetConnectedResearch.Add(ResearchID)
+                Next ResearchID
+            End If
+
         End If
     End Function
+    Public Function CountModRules(Path As String) As Integer
+        Return CountModRulesParseDirectory(Path)
+    End Function
+    Private Function CountModRulesParseDirectory(Path As String) As Integer
+        Dim FileName
+        For Each FileName In Directory.GetFiles(Path)
+            If FileName.EndsWith(".rul") Then
+                CountModRulesParseDirectory += 1
+            End If
+        Next
+
+        For Each DirName In Directory.GetDirectories(Path)
+            CountModRulesParseDirectory += CountModRules(DirName)
+        Next
+    End Function
+
 
     Public Sub ImportMod(Path As String)
         ParseDirectory(Path)
@@ -149,6 +197,7 @@ Module XComResearchImport
                 Dim Parser = New YamlFileParser(FileName)
                 Dim RootNode = Parser.Parse()
                 AllModNodes.Add(RootNode)
+                ImportProgress.ImportProgressBar.PerformStep()
             End If
         Next
 

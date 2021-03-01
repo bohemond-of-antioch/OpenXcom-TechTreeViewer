@@ -47,14 +47,24 @@ Partial Class MainView
         Me.SortToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.ProgramMenuSortAttractors = New System.Windows.Forms.ToolStripMenuItem()
         Me.StopSortToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.ToolStripMenuItem6 = New System.Windows.Forms.ToolStripSeparator()
+        Me.ClearHighlightToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.MenuEditNode = New System.Windows.Forms.ContextMenuStrip(Me.components)
         Me.MenuEditNodeProperties = New System.Windows.Forms.ToolStripMenuItem()
         Me.MenuEditNodeApplyTemplate = New System.Windows.Forms.ToolStripMenuItem()
         Me.Template1ToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.ToolStripMenuItem2 = New System.Windows.Forms.ToolStripSeparator()
         Me.MenuEditNodeRemove = New System.Windows.Forms.ToolStripMenuItem()
+        Me.ToolStripMenuItem5 = New System.Windows.Forms.ToolStripSeparator()
+        Me.MenuEditHighlightNeigborhood = New System.Windows.Forms.ToolStripMenuItem()
+        Me.MenuEditHighlightNeigborhood1 = New System.Windows.Forms.ToolStripMenuItem()
+        Me.MenuEditHighlightNeigborhood2 = New System.Windows.Forms.ToolStripMenuItem()
+        Me.MenuEditHighlightNeigborhood3 = New System.Windows.Forms.ToolStripMenuItem()
+        Me.MenuEditHighlightNeigborhood4 = New System.Windows.Forms.ToolStripMenuItem()
+        Me.MenuEditHighlightNeigborhood5 = New System.Windows.Forms.ToolStripMenuItem()
         Me.SortTimer = New System.Windows.Forms.Timer(Me.components)
         Me.KeyScrollTimer = New System.Windows.Forms.Timer(Me.components)
+        Me.SearchToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.MenuNewNode.SuspendLayout()
         Me.ProgramMenu.SuspendLayout()
         Me.MenuEditNode.SuspendLayout()
@@ -190,7 +200,7 @@ Partial Class MainView
         '
         'GraphToolStripMenuItem
         '
-        Me.GraphToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.SortToolStripMenuItem, Me.StopSortToolStripMenuItem})
+        Me.GraphToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.SortToolStripMenuItem, Me.StopSortToolStripMenuItem, Me.ToolStripMenuItem6, Me.ClearHighlightToolStripMenuItem, Me.SearchToolStripMenuItem})
         Me.GraphToolStripMenuItem.Name = "GraphToolStripMenuItem"
         Me.GraphToolStripMenuItem.Size = New System.Drawing.Size(48, 20)
         Me.GraphToolStripMenuItem.Text = "Graph"
@@ -199,7 +209,7 @@ Partial Class MainView
         '
         Me.SortToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ProgramMenuSortAttractors})
         Me.SortToolStripMenuItem.Name = "SortToolStripMenuItem"
-        Me.SortToolStripMenuItem.Size = New System.Drawing.Size(116, 22)
+        Me.SortToolStripMenuItem.Size = New System.Drawing.Size(187, 22)
         Me.SortToolStripMenuItem.Text = "Sort"
         '
         'ProgramMenuSortAttractors
@@ -211,26 +221,37 @@ Partial Class MainView
         'StopSortToolStripMenuItem
         '
         Me.StopSortToolStripMenuItem.Name = "StopSortToolStripMenuItem"
-        Me.StopSortToolStripMenuItem.Size = New System.Drawing.Size(116, 22)
+        Me.StopSortToolStripMenuItem.Size = New System.Drawing.Size(187, 22)
         Me.StopSortToolStripMenuItem.Text = "Stop sort"
+        '
+        'ToolStripMenuItem6
+        '
+        Me.ToolStripMenuItem6.Name = "ToolStripMenuItem6"
+        Me.ToolStripMenuItem6.Size = New System.Drawing.Size(184, 6)
+        '
+        'ClearHighlightToolStripMenuItem
+        '
+        Me.ClearHighlightToolStripMenuItem.Name = "ClearHighlightToolStripMenuItem"
+        Me.ClearHighlightToolStripMenuItem.Size = New System.Drawing.Size(187, 22)
+        Me.ClearHighlightToolStripMenuItem.Text = "Clear Highlights (Space)"
         '
         'MenuEditNode
         '
-        Me.MenuEditNode.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.MenuEditNodeProperties, Me.MenuEditNodeApplyTemplate, Me.ToolStripMenuItem2, Me.MenuEditNodeRemove})
+        Me.MenuEditNode.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.MenuEditNodeProperties, Me.MenuEditNodeApplyTemplate, Me.ToolStripMenuItem2, Me.MenuEditNodeRemove, Me.ToolStripMenuItem5, Me.MenuEditHighlightNeigborhood})
         Me.MenuEditNode.Name = "MenuEditNode"
-        Me.MenuEditNode.Size = New System.Drawing.Size(144, 76)
+        Me.MenuEditNode.Size = New System.Drawing.Size(178, 104)
         '
         'MenuEditNodeProperties
         '
         Me.MenuEditNodeProperties.Name = "MenuEditNodeProperties"
-        Me.MenuEditNodeProperties.Size = New System.Drawing.Size(143, 22)
+        Me.MenuEditNodeProperties.Size = New System.Drawing.Size(177, 22)
         Me.MenuEditNodeProperties.Text = "Properties"
         '
         'MenuEditNodeApplyTemplate
         '
         Me.MenuEditNodeApplyTemplate.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.Template1ToolStripMenuItem})
         Me.MenuEditNodeApplyTemplate.Name = "MenuEditNodeApplyTemplate"
-        Me.MenuEditNodeApplyTemplate.Size = New System.Drawing.Size(143, 22)
+        Me.MenuEditNodeApplyTemplate.Size = New System.Drawing.Size(177, 22)
         Me.MenuEditNodeApplyTemplate.Text = "Apply template"
         '
         'Template1ToolStripMenuItem
@@ -242,13 +263,55 @@ Partial Class MainView
         'ToolStripMenuItem2
         '
         Me.ToolStripMenuItem2.Name = "ToolStripMenuItem2"
-        Me.ToolStripMenuItem2.Size = New System.Drawing.Size(140, 6)
+        Me.ToolStripMenuItem2.Size = New System.Drawing.Size(174, 6)
         '
         'MenuEditNodeRemove
         '
         Me.MenuEditNodeRemove.Name = "MenuEditNodeRemove"
-        Me.MenuEditNodeRemove.Size = New System.Drawing.Size(143, 22)
+        Me.MenuEditNodeRemove.Size = New System.Drawing.Size(177, 22)
         Me.MenuEditNodeRemove.Text = "Remove"
+        '
+        'ToolStripMenuItem5
+        '
+        Me.ToolStripMenuItem5.Name = "ToolStripMenuItem5"
+        Me.ToolStripMenuItem5.Size = New System.Drawing.Size(174, 6)
+        '
+        'MenuEditHighlightNeigborhood
+        '
+        Me.MenuEditHighlightNeigborhood.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.MenuEditHighlightNeigborhood1, Me.MenuEditHighlightNeigborhood2, Me.MenuEditHighlightNeigborhood3, Me.MenuEditHighlightNeigborhood4, Me.MenuEditHighlightNeigborhood5})
+        Me.MenuEditHighlightNeigborhood.Name = "MenuEditHighlightNeigborhood"
+        Me.MenuEditHighlightNeigborhood.Size = New System.Drawing.Size(177, 22)
+        Me.MenuEditHighlightNeigborhood.Text = "Highlight neigborhood"
+        '
+        'MenuEditHighlightNeigborhood1
+        '
+        Me.MenuEditHighlightNeigborhood1.Name = "MenuEditHighlightNeigborhood1"
+        Me.MenuEditHighlightNeigborhood1.Size = New System.Drawing.Size(135, 22)
+        Me.MenuEditHighlightNeigborhood1.Text = "1 (Shift click)"
+        '
+        'MenuEditHighlightNeigborhood2
+        '
+        Me.MenuEditHighlightNeigborhood2.Name = "MenuEditHighlightNeigborhood2"
+        Me.MenuEditHighlightNeigborhood2.Size = New System.Drawing.Size(135, 22)
+        Me.MenuEditHighlightNeigborhood2.Text = "2"
+        '
+        'MenuEditHighlightNeigborhood3
+        '
+        Me.MenuEditHighlightNeigborhood3.Name = "MenuEditHighlightNeigborhood3"
+        Me.MenuEditHighlightNeigborhood3.Size = New System.Drawing.Size(135, 22)
+        Me.MenuEditHighlightNeigborhood3.Text = "3"
+        '
+        'MenuEditHighlightNeigborhood4
+        '
+        Me.MenuEditHighlightNeigborhood4.Name = "MenuEditHighlightNeigborhood4"
+        Me.MenuEditHighlightNeigborhood4.Size = New System.Drawing.Size(135, 22)
+        Me.MenuEditHighlightNeigborhood4.Text = "4"
+        '
+        'MenuEditHighlightNeigborhood5
+        '
+        Me.MenuEditHighlightNeigborhood5.Name = "MenuEditHighlightNeigborhood5"
+        Me.MenuEditHighlightNeigborhood5.Size = New System.Drawing.Size(135, 22)
+        Me.MenuEditHighlightNeigborhood5.Text = "5"
         '
         'SortTimer
         '
@@ -258,6 +321,12 @@ Partial Class MainView
         '
         Me.KeyScrollTimer.Enabled = True
         Me.KeyScrollTimer.Interval = 10
+        '
+        'SearchToolStripMenuItem
+        '
+        Me.SearchToolStripMenuItem.Name = "SearchToolStripMenuItem"
+        Me.SearchToolStripMenuItem.Size = New System.Drawing.Size(187, 22)
+        Me.SearchToolStripMenuItem.Text = "Search (F3)"
         '
         'MainView
         '
@@ -311,4 +380,14 @@ Partial Class MainView
     Friend WithEvents RecentToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents ExampleFileToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents KeyScrollTimer As Timer
+    Friend WithEvents ToolStripMenuItem5 As ToolStripSeparator
+    Friend WithEvents MenuEditHighlightNeigborhood As ToolStripMenuItem
+    Friend WithEvents MenuEditHighlightNeigborhood1 As ToolStripMenuItem
+    Friend WithEvents MenuEditHighlightNeigborhood2 As ToolStripMenuItem
+    Friend WithEvents MenuEditHighlightNeigborhood3 As ToolStripMenuItem
+    Friend WithEvents MenuEditHighlightNeigborhood4 As ToolStripMenuItem
+    Friend WithEvents MenuEditHighlightNeigborhood5 As ToolStripMenuItem
+    Friend WithEvents ToolStripMenuItem6 As ToolStripSeparator
+    Friend WithEvents ClearHighlightToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents SearchToolStripMenuItem As ToolStripMenuItem
 End Class

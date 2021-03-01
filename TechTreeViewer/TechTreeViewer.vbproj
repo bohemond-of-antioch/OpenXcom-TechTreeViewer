@@ -81,6 +81,12 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Hl.vb" />
+    <Compile Include="ImportProgress.Designer.vb">
+      <DependentUpon>ImportProgress.vb</DependentUpon>
+    </Compile>
+    <Compile Include="ImportProgress.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="MainView.designer.vb">
       <DependentUpon>MainView.vb</DependentUpon>
     </Compile>
@@ -115,6 +121,9 @@
   <ItemGroup>
     <EmbeddedResource Include="EditProperties.resx">
       <DependentUpon>EditProperties.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ImportProgress.resx">
+      <DependentUpon>ImportProgress.vb</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="MainView.resx">
       <DependentUpon>MainView.vb</DependentUpon>

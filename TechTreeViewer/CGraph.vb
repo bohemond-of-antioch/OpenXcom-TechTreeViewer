@@ -17,6 +17,7 @@ Public Class CGraph
         Public ShownProperties As List(Of String)
         Public Color As Color
         Public Decoration As EDecoration
+        Public Highlighted As Boolean
     End Structure
 
     Public MustInherit Class CGraphElement
@@ -33,7 +34,7 @@ Public Class CGraph
             If SupportsDisplayProperties() Then DisplayProperties.ShownProperties = New List(Of String)
             If SupportsDisplayColor() Then DisplayProperties.Color = Color.Black
             If SupportsDisplayDecoration() Then DisplayProperties.Decoration = EDecoration.None
-
+            DisplayProperties.Highlighted = True
         End Sub
 
         Public Sub ApplyTemplate(Template As CPropertyTemplate)
@@ -239,7 +240,7 @@ Public Class CGraph
     Public Sub Remove(ByRef Node As CNode)
         Remove(Node.Index)
     End Sub
-    Public Sub Remove(Index As Integer)
+    Public Sub Remove(Index As Integer, Optional Recalculate As Boolean = True)
         For f = UBound(Connections) To 0 Step -1
             If Connections(f).NodeA = Index Or Connections(f).NodeB = Index Then Disconnect(Connections(f))
         Next f
@@ -252,9 +253,9 @@ Public Class CGraph
             If Connections(f).NodeA > Index Then Connections(f).NodeA -= 1
             If Connections(f).NodeB > Index Then Connections(f).NodeB -= 1
         Next f
-        RecalculateClusters()
+        If Recalculate Then RecalculateClusters()
     End Sub
-    Public Sub Connect(NodeA As Integer, NodeB As Integer, Optional ByRef Template As CPropertyTemplate = Nothing)
+    Public Sub Connect(NodeA As Integer, NodeB As Integer, Optional ByRef Template As CPropertyTemplate = Nothing, Optional Recalculate As Boolean = True)
         For f = 0 To UBound(Connections)
             If Connections(f).NodeA = NodeA And Connections(f).NodeB = NodeB Then Exit Sub
         Next f
@@ -277,7 +278,7 @@ Public Class CGraph
                 NewConnection.TwoWay = True
             End If
         Next f
-        RecalculateClusters()
+        If Recalculate Then RecalculateClusters()
     End Sub
     Public Sub Disconnect(NodeA As Integer, NodeB As Integer)
         For f = 0 To UBound(Connections)

@@ -21,8 +21,13 @@
     Friend SortMode As ESortMode
 
     Public Sub LoadSettings()
-        Dim ViewerSettings = New YamlFileParser("settings.yml").Parse()
-
+        Dim ViewerSettings
+        Try
+            ViewerSettings = New YamlFileParser("settings.yml").Parse()
+        Catch ex As IO.FileNotFoundException
+            MsgBox("Settings file not found. Make sure settings.yml is present in path.", MsgBoxStyle.Critical, "Can't continue")
+            End
+        End Try
         If ViewerSettings.HasMapping("sort") AndAlso ViewerSettings.GetMapping("sort").HasMapping("attractors") Then
             AttractorPullPower = Val(ViewerSettings.GetMapping("sort").GetMapping("attractors").GetMapping("pullPower", "2.5").GetValue())
             AttractorPullConstant = Val(ViewerSettings.GetMapping("sort").GetMapping("attractors").GetMapping("pullConstant", "0.001").GetValue())
@@ -40,11 +45,16 @@
             ColorSettings = ViewerSettings.GetMapping("colors")
             If ColorSettings.HasMapping("graph") Then
                 Dim GraphColors = ColorSettings.GetMapping("graph")
+                If GraphColors.HasMapping("darkenedAlpha") Then
+                    MainView.DarkenedAlpha = Val(GraphColors.GetMapping("darkenedAlpha").GetValue())
+                End If
                 If GraphColors.HasMapping("background") Then
                     MainView.BackColor = ParseColor(GraphColors.GetMapping("background").GetValue())
                 End If
                 If GraphColors.HasMapping("text") Then
-                    MainView.NodeTextBrush = New SolidBrush(ParseColor(GraphColors.GetMapping("text").GetValue()))
+                    Dim TextColor = ParseColor(GraphColors.GetMapping("text").GetValue())
+                    MainView.NodeTextBrush = New SolidBrush(TextColor)
+                    MainView.NodeDarkenedTextBrush = New SolidBrush(Color.FromArgb(MainView.DarkenedAlpha, TextColor.R, TextColor.G, TextColor.B))
                 End If
             End If
         End If
@@ -81,9 +91,17 @@
         ChangesSaved = True
     End Sub
     Friend Sub AddRecentItem(FileName As String, Action As ERecentItemAction, Optional Save As Boolean = True)
-        For Each Item In RecentItems
-            If Item.Action = Action And Item.FileName = FileName Then Exit Sub
-        Next Item
+        For f = 0 To RecentItems.Count - 1
+            Dim Item = RecentItems(f)
+            If Item.Action = Action And Item.FileName = FileName Then
+                If (f <> 0) Then
+                    RecentItems.RemoveAt(f)
+                    RecentItems.Insert(0, Item)
+                End If
+                If Save Then SaveRecentItems()
+                Exit Sub
+            End If
+        Next f
         Dim NewRecentItem As SRecentItem
         NewRecentItem = New SRecentItem
         NewRecentItem.Action = Action
@@ -157,9 +175,11 @@
                 ModsToLoad.Add(ModEntry.GetMapping("id").GetValue())
             End If
         Next
+        ImportProgress.Show(MainView)
         Dim AllResearch = XComResearchImport.LoadResearch(Path, ModsToLoad)
 
         Dim CoordsRandomizer As Random = New Random
+        ImportProgress.SetProgressBar(AllResearch.Count, "Building graph nodes")
 
         XComResearchConnectionTemplates = New Dictionary(Of String, CPropertyTemplate)
         If Not ConnectionColors Is Nothing Then
@@ -184,6 +204,7 @@
         NameProperty.Name = "Name"
         NodeTemplate.Properties.Add(NameProperty)
         Dim LastCreatedNode As CGraph.CNode = Nothing
+
         For Each Research In AllResearch
             LastCreatedNode = Graph.Add(NodeTemplate)
             LastCreatedNode.SetProperty("RawName", Research.Name)
@@ -212,9 +233,11 @@
                 LastCreatedNode.SetProperty("NeedsItem", "Needs item")
                 LastCreatedNode.DisplayProperties.ShownProperties.Add("NeedsItem")
             End If
-        Next
+            ImportProgress.ImportProgressBar.PerformStep()
+        Next Research
 
         REM Now we do all node connections
+        ImportProgress.SetProgressBar(AllResearch.Count, "Building graph connections")
         For Each Research In AllResearch
             For Each ConnectionType In XComResearchConnectionTemplates.Keys
                 Dim Connections As List(Of String)
@@ -230,12 +253,13 @@
                 End Select
 
                 CreateConnections(Research, Connections, XComResearchConnectionTemplates(ConnectionType), Reversed)
-            Next
-        Next
+            Next ConnectionType
+            ImportProgress.ImportProgressBar.PerformStep()
+        Next Research
 
 
         REM Now colorize
-
+        ImportProgress.SetProgressBar(Graph.Nodes.Count, "Adding colors")
         For Each Node As CGraph.CNode In Graph
             Dim Connections = Graph.GetConnections(Node.Index)
             Dim IncomingConnections As Integer = 0
@@ -254,8 +278,10 @@
                     Node.DisplayProperties.Color = ParseColor(SectionColors.GetMapping(Node.GetProperty("RawSection")).GetValue())
                 End If
             End If
+            ImportProgress.ImportProgressBar.PerformStep()
         Next Node
 
+        ImportProgress.SetProgressBar(Graph.Nodes.Count * 20, "Pre-sorting graph")
         Dim AngleRandomizer As Random = New Random
         For f = 20 To 1 Step -1
             For Each Node As CGraph.CNode In Graph
@@ -296,21 +322,29 @@
                     Node.DisplayProperties.Position.Y = AnchorPosition.Y + Math.Sin(Angle) * 20
                 End If
 
+                ImportProgress.ImportProgressBar.PerformStep()
             Next Node
         Next f
 
+        Graph.RecalculateClusters()
         Hl.SortMode = ESortMode.Attractors
 
         Dim InitialSortIterations As Integer = 100
+        Dim AutostartSort As Boolean = True
         If ViewerSettings.HasMapping("sort") Then
             InitialSortIterations = Val(ViewerSettings.GetMapping("sort").GetMapping("initialIterations", Str(InitialSortIterations)).GetValue())
+            AutostartSort = (ViewerSettings.GetMapping("sort").GetMapping("autostartRealtimeSort", "true").GetValue().ToLower() = "true")
         End If
-        LocalForceLimit = 500
+        LocalForceLimit = 50
+        ImportProgress.SetProgressBar(InitialSortIterations, "Sorting graph")
         For f = 0 To InitialSortIterations
+            Debug.WriteLine("Sort iteration: " + Str(f))
             ProcessSort()
+            ImportProgress.ImportProgressBar.PerformStep()
         Next
         LocalForceLimit = 50
-        MainView.SortTimer.Enabled = True
+        MainView.SortTimer.Enabled = AutostartSort
+        ImportProgress.Close()
     End Sub
 
     Private Function ParseColor(ColorDescription As String) As Color
@@ -348,199 +382,11 @@
             For c = 0 To UBound(Graph.Connections)
                 If Graph.Connections(c).NodeA = NodeA And Graph.Connections(c).NodeB = NodeB Then GoTo ZaTo
             Next c
-            Graph.Connect(NodeA, NodeB, Template)
+            Graph.Connect(NodeA, NodeB, Template, False)
 ZaTo:
         Next
     End Sub
 
-    Public Sub ImportTechResearchGraph(FileName As String)
-        Dim CoordsRandomizer As Random = New Random
-        Dim Reader As System.IO.TextReader
-        Reader = System.IO.File.OpenText(FileName)
-
-        Dim ConnectionTemplate As CPropertyTemplate
-        ConnectionTemplate = New CPropertyTemplate
-        ConnectionTemplate.Color = Color.Blue
-        ConnectionTemplate.Size = 1
-        Dim ConnectionTemplateRequirement As CPropertyTemplate
-        ConnectionTemplateRequirement = New CPropertyTemplate
-        ConnectionTemplateRequirement.Color = Color.Red
-        ConnectionTemplateRequirement.Size = 1
-        Dim ConnectionTemplateLookup As CPropertyTemplate
-        ConnectionTemplateLookup = New CPropertyTemplate
-        ConnectionTemplateLookup.Color = Color.LightCyan
-        ConnectionTemplateLookup.Size = 1
-        Dim ConnectionTemplateFree As CPropertyTemplate
-        ConnectionTemplateFree = New CPropertyTemplate
-        ConnectionTemplateFree.Color = Color.Green
-        ConnectionTemplateFree.Size = 1
-        Dim NodeTemplate As CPropertyTemplate
-        NodeTemplate = New CPropertyTemplate
-        NodeTemplate.Size = 15
-        NodeTemplate.Color = Color.Black
-        Dim NameProperty As CPropertyTemplate.SProperty
-        NameProperty.DefaultValue = ""
-        NameProperty.Display = True
-        NameProperty.Name = "Name"
-        NodeTemplate.Properties.Add(NameProperty)
-        Dim WholeTree(-1) As String
-        Dim Line As String
-        Do
-            Line = Reader.ReadLine()
-            If Line Is Nothing Then Exit Do
-            ReDim Preserve WholeTree(UBound(WholeTree) + 1)
-            WholeTree(UBound(WholeTree)) = Line
-        Loop
-        Dim TreeChanged As Boolean
-        Do
-            TreeChanged = False
-            Dim LastCreatedNode As CGraph.CNode = Nothing
-            Dim NodeContext As CGraph.CNode = Nothing
-            For f = 0 To UBound(WholeTree)
-                Dim ParsedLine() As String
-                Dim Command As String
-                Dim Value As String
-                ParsedLine = WholeTree(f).Split(":")
-                Command = ParsedLine(0)
-                Value = ParsedLine(1)
-                Select Case Command
-                    Case "RES"
-                        Dim CreateNode As Boolean
-                        CreateNode = True
-                        For Each Node As CGraph.CNode In Graph
-                            If Node.GetProperty("Name") = Value Then
-                                NodeContext = Node
-                                LastCreatedNode = Nothing
-                                CreateNode = False
-                                Exit For
-                            End If
-                        Next Node
-                        If CreateNode Then
-                            LastCreatedNode = Graph.Add(NodeTemplate)
-                            LastCreatedNode.SetProperty("Name", Value)
-                            LastCreatedNode.DisplayProperties.Position.X = CoordsRandomizer.Next(-2500, 2500)
-                            LastCreatedNode.DisplayProperties.Position.Y = CoordsRandomizer.Next(-2500, 2500)
-                            NodeContext = LastCreatedNode
-                            TreeChanged = True
-                        End If
-                    Case "LIST_ORDER"
-                        If Not LastCreatedNode Is Nothing Then
-                            LastCreatedNode.SetProperty("ListOrder", Value)
-                            'LastCreatedNode.DisplayProperties.ShownProperties.Add("ListOrder")
-                        End If
-                    Case "SECTION"
-                        If Not LastCreatedNode Is Nothing Then
-                            LastCreatedNode.SetProperty("Section", Value)
-                            'LastCreatedNode.DisplayProperties.ShownProperties.Add("Section")
-                        End If
-                    Case "PLANET"
-                        If Not LastCreatedNode Is Nothing Then
-                            LastCreatedNode.SetProperty("Planet", Value)
-                            'LastCreatedNode.DisplayProperties.ShownProperties.Add("Planet")
-                            Dim Result As Boolean
-                            Result = CreatePlanetNodeOrConnect(Value, LastCreatedNode)
-                            If Not Result Then TreeChanged = True
-                        End If
-                    Case "COST"
-                        If Not LastCreatedNode Is Nothing Then
-                            LastCreatedNode.SetProperty("Cost", Value)
-                            If Value > 0 Then LastCreatedNode.DisplayProperties.ShownProperties.Add("Cost")
-                        End If
-                    Case "ITEM"
-                        If Not LastCreatedNode Is Nothing And Value = "true" Then
-                            LastCreatedNode.SetProperty("NeedsItem", "Needs item")
-                            LastCreatedNode.DisplayProperties.ShownProperties.Add("NeedsItem")
-                        End If
-                    Case "DEP", "REQ", "LOOKUP", "FREE"
-                        If Not NodeContext Is Nothing Then
-                            Dim ConnectNode As CGraph.CNode
-                            Dim NodeA, NodeB As Integer
-                            Dim Template As CPropertyTemplate = Nothing
-                            ConnectNode = Nothing
-                            For Each Node As CGraph.CNode In Graph
-                                If Node.GetProperty("Name") = Value Then
-                                    ConnectNode = Node
-                                    Exit For
-                                End If
-                            Next Node
-
-                            If Not ConnectNode Is Nothing Then
-                                Select Case Command
-                                    Case "DEP"
-                                        NodeA = ConnectNode.Index
-                                        NodeB = NodeContext.Index
-                                        Template = ConnectionTemplate
-                                    Case "REQ"
-                                        NodeA = ConnectNode.Index
-                                        NodeB = NodeContext.Index
-                                        Template = ConnectionTemplateRequirement
-                                    Case "LOOKUP"
-                                        NodeA = NodeContext.Index
-                                        NodeB = ConnectNode.Index
-                                        Template = ConnectionTemplateLookup
-                                    Case "FREE"
-                                        NodeA = NodeContext.Index
-                                        NodeB = ConnectNode.Index
-                                        Template = ConnectionTemplateFree
-                                End Select
-                                For c = 0 To UBound(Graph.Connections)
-                                    If Graph.Connections(c).NodeA = NodeA And Graph.Connections(c).NodeB = NodeB Then GoTo ZaTo
-                                Next c
-                                Graph.Connect(NodeA, NodeB, Template)
-                                TreeChanged = True
-ZaTo:
-                            End If
-                        End If
-                End Select
-            Next f
-        Loop While TreeChanged = True
-
-        For Each Node As CGraph.CNode In Graph
-            Dim Connections = Graph.GetConnections(Node.Index)
-            Dim IncomingConnections As Integer = 0
-            For c = 0 To Connections.Length() - 1
-                If Connections(c).NodeB = Node.Index Then
-                    IncomingConnections += 1
-                End If
-            Next c
-
-            If IncomingConnections = 0 Then
-                Node.DisplayProperties.Decoration = CGraph.EDecoration.Square
-            End If
-
-            Select Case Node.GetProperty("Section")
-                Case "NOT_AVAILABLE"
-                    Node.DisplayProperties.Color = Color.Red
-                Case "ALIEN_ARTIFACTS"
-                    Node.DisplayProperties.Color = Color.CornflowerBlue
-                Case "NATURAL_SCIENCE"
-                    Node.DisplayProperties.Color = Color.ForestGreen
-                Case "STR_CAPTAIN_LOG"
-                    Node.DisplayProperties.Color = Color.Lavender
-                Case "ALIEN_LIFE_FORMS"
-                    Node.DisplayProperties.Color = Color.GreenYellow
-                Case "ALIEN_RESEARCH_UC"
-                    Node.DisplayProperties.Color = Color.Yellow
-                Case "BASE_FACILITIES"
-                    Node.DisplayProperties.Color = Color.Beige
-                Case "BASIC_RESEARCH"
-                    Node.DisplayProperties.Color = Color.FloralWhite
-                Case "HEAVY_WEAPONS_PLATFORMS"
-                    Node.DisplayProperties.Color = Color.Crimson
-                Case "UFOS"
-                    Node.DisplayProperties.Color = Color.SkyBlue
-                Case "UFO_COMPONENTS"
-                    Node.DisplayProperties.Color = Color.Olive
-                Case "UNDEFINED"
-                    Node.DisplayProperties.Color = Color.Gray
-                Case "WEAPONS_AND_EQUIPMENT"
-                    Node.DisplayProperties.Color = Color.Brown
-                Case "XCOM_CRAFT_ARMAMENT"
-                    Node.DisplayProperties.Color = Color.Purple
-            End Select
-        Next Node
-        Reader.Close()
-    End Sub
     Private Function CreatePlanetNodeOrConnect(Planet As String, TechNode As CGraph.CNode)
         CreatePlanetNodeOrConnect = True
         Dim ConnectNode As CGraph.CNode
@@ -610,89 +456,133 @@ ZaTo:
         Return Math.Sqrt(dx * dx + dy * dy)
     End Function
 
-    Private AttractorPullPower = 2.5
-    Private AttractorPullConstant = 0.001
-    Private AttractorPushPower = 3
-    Private AttractorPushConstant = 20000000
-    Private AttractorClusterPower = 1.1
-    Private AttractorClusterConstant = 0.0001
-    Private LocalForceLimit = 50
+    Private AttractorPullPower As Single = 2.5
+    Private AttractorPullConstant As Single = 0.001
+    Private AttractorPushPower As Single = 3
+    Private AttractorPushConstant As Single = 20000000
+    Private AttractorClusterPower As Single = 1.1
+    Private AttractorClusterConstant As Single = 0.0001
+    Private LocalForceLimit As Single = 50
     Private Sub SortAttractors()
         Dim Force() As PointF
         ReDim Force(Graph.Nodes.Count - 1)
-        For Each Node As CGraph.CNode In Graph
-            Force(Node.Index) = New PointF(0, 0)
-            Dim Connections = Graph.GetConnections(Node.Index)
-            For Each Connection In Connections
-                If Connection.NodeA = Connection.NodeB Then Continue For
-                Dim OtherNode As Integer
-                If Connection.NodeA = Node.Index Then
-                    OtherNode = Connection.NodeB
-                Else
-                    OtherNode = Connection.NodeA
-                End If
-                Dim RawDistance As Double = Math.Max(Math.Sqrt((Graph.GetNode(OtherNode).DisplayProperties.Position.X - Node.DisplayProperties.Position.X) * (Graph.GetNode(OtherNode).DisplayProperties.Position.X - Node.DisplayProperties.Position.X) + (Graph.GetNode(OtherNode).DisplayProperties.Position.Y - Node.DisplayProperties.Position.Y) * (Graph.GetNode(OtherNode).DisplayProperties.Position.Y - Node.DisplayProperties.Position.Y)), 0.1)
-                Dim Distance As Double = Math.Max(1, RawDistance - Node.DisplayProperties.Size - Graph.GetNode(OtherNode).DisplayProperties.Size)
-                Dim LocalForce As PointF
-                Dim SortWeight As Double = 1
-                If Not Connection.GetProperty("SortWeight") Is Nothing Then
-                    Dim Weight As Double = Math.Min(200, Val(Connection.GetProperty("SortWeight")))
-                    SortWeight = (Weight / 100.0)
-                End If
+        Dim Stopwatch As Stopwatch = Stopwatch.StartNew()
+        Dim ConnectionsTime As Long = 0
+        Dim RepulsiveTime As Long = 0
+        Dim ClusterTime As Long = 0
+        For f = 0 To Graph.Nodes.Count - 1
+            Force(f) = New PointF(0, 0)
+        Next f
 
-                LocalForce.X = Math.Pow(Distance, AttractorPullPower * SortWeight) * AttractorPullConstant * ((Graph.GetNode(OtherNode).DisplayProperties.Position.X - Node.DisplayProperties.Position.X) / RawDistance)
-                LocalForce.Y = Math.Pow(Distance, AttractorPullPower * SortWeight) * AttractorPullConstant * ((Graph.GetNode(OtherNode).DisplayProperties.Position.Y - Node.DisplayProperties.Position.Y) / RawDistance)
-                Dim LocalForceMagnitude = Math.Sqrt(LocalForce.X * LocalForce.X + LocalForce.Y * LocalForce.Y)
+        Parallel.ForEach(Of CGraph.CNode)(Graph.Nodes, Sub(Node As CGraph.CNode, LoopState As ParallelLoopState, Parameter As Long)
+                                                           Dim ParallelStopwatch As Stopwatch
+                                                           ParallelStopwatch = Stopwatch.StartNew()
+                                                           Dim Connections = Graph.GetConnections(Node.Index)
+                                                           For Each Connection In Connections
+                                                               If Connection.NodeA = Connection.NodeB Then Continue For
+                                                               Dim OtherNode As Integer
+                                                               If Connection.NodeA = Node.Index Then
+                                                                   OtherNode = Connection.NodeB
+                                                               Else
+                                                                   OtherNode = Connection.NodeA
+                                                               End If
+                                                               Dim RawDistance As Double = Math.Max(Math.Sqrt((Graph.GetNode(OtherNode).DisplayProperties.Position.X - Node.DisplayProperties.Position.X) * (Graph.GetNode(OtherNode).DisplayProperties.Position.X - Node.DisplayProperties.Position.X) + (Graph.GetNode(OtherNode).DisplayProperties.Position.Y - Node.DisplayProperties.Position.Y) * (Graph.GetNode(OtherNode).DisplayProperties.Position.Y - Node.DisplayProperties.Position.Y)), 0.1)
+                                                               Dim Distance As Double = Math.Max(1, RawDistance - Node.DisplayProperties.Size - Graph.GetNode(OtherNode).DisplayProperties.Size)
+                                                               Dim LocalForce As PointF
+                                                               Dim SortWeight As Double = 1
+                                                               If Not Connection.GetProperty("SortWeight") Is Nothing Then
+                                                                   Dim Weight As Double = Math.Min(200, Val(Connection.GetProperty("SortWeight")))
+                                                                   SortWeight = (Weight / 100.0)
+                                                               End If
+                                                               Dim ForceMagnitude = Math.Pow(Distance, AttractorPullPower * SortWeight) * AttractorPullConstant
+                                                               LocalForce.X = ForceMagnitude * ((Graph.GetNode(OtherNode).DisplayProperties.Position.X - Node.DisplayProperties.Position.X) / RawDistance)
+                                                               LocalForce.Y = ForceMagnitude * ((Graph.GetNode(OtherNode).DisplayProperties.Position.Y - Node.DisplayProperties.Position.Y) / RawDistance)
 
+                                                               If ForceMagnitude > LocalForceLimit Then
+                                                                   LocalForce.X = (LocalForce.X / ForceMagnitude) * LocalForceLimit
+                                                                   LocalForce.Y = (LocalForce.Y / ForceMagnitude) * LocalForceLimit
+                                                               End If
+                                                               SyncLock Force
+                                                                   Force(Node.Index).X += LocalForce.X
+                                                                   Force(Node.Index).Y += LocalForce.Y
+                                                               End SyncLock
+                                                           Next Connection
+                                                           ParallelStopwatch.Stop()
+                                                           System.Threading.Interlocked.Add(ConnectionsTime, ParallelStopwatch.ElapsedMilliseconds)
 
-                If LocalForceMagnitude > LocalForceLimit Then
-                    LocalForce.X = (LocalForce.X / LocalForceMagnitude) * LocalForceLimit
-                    LocalForce.Y = (LocalForce.Y / LocalForceMagnitude) * LocalForceLimit
-                End If
-                Force(Node.Index).X += LocalForce.X
-                Force(Node.Index).Y += LocalForce.Y
-            Next Connection
+                                                           ParallelStopwatch = New Stopwatch()
+                                                           ParallelStopwatch.Start()
 
-            For Each RepulsiveNode As CGraph.CNode In Graph
-                If RepulsiveNode.Index <> Node.Index Then
-                    Dim RawDistance As Double = Math.Max(Math.Sqrt((RepulsiveNode.DisplayProperties.Position.X - Node.DisplayProperties.Position.X) * (RepulsiveNode.DisplayProperties.Position.X - Node.DisplayProperties.Position.X) + (RepulsiveNode.DisplayProperties.Position.Y - Node.DisplayProperties.Position.Y) * (RepulsiveNode.DisplayProperties.Position.Y - Node.DisplayProperties.Position.Y)), 0.1)
-                    Dim Distance As Double = Math.Max(1, RawDistance - Node.DisplayProperties.Size - RepulsiveNode.DisplayProperties.Size)
-                    Dim LocalForce As PointF
-                    LocalForce.X = (AttractorPushConstant / Math.Pow(Distance, AttractorPushPower)) * ((RepulsiveNode.DisplayProperties.Position.X - Node.DisplayProperties.Position.X) / RawDistance)
-                    LocalForce.Y = (AttractorPushConstant / Math.Pow(Distance, AttractorPushPower)) * ((RepulsiveNode.DisplayProperties.Position.Y - Node.DisplayProperties.Position.Y) / RawDistance)
-                    Dim LocalForceMagnitude = Math.Sqrt(LocalForce.X * LocalForce.X + LocalForce.Y * LocalForce.Y)
-                    If LocalForceMagnitude > LocalForceLimit Then
-                        LocalForce.X = (LocalForce.X / LocalForceMagnitude) * LocalForceLimit
-                        LocalForce.Y = (LocalForce.Y / LocalForceMagnitude) * LocalForceLimit
-                    End If
-                    Force(Node.Index).X -= LocalForce.X
-                    Force(Node.Index).Y -= LocalForce.Y
-                End If
-            Next
+                                                           Dim RepulsiveLocalForce As PointF
+                                                           'Parallel.ForEach(Of CGraph.CNode)(Graph.Nodes, Sub(RepulsiveNode As CGraph.CNode, LoopStateRepulsive As ParallelLoopState, ParameterRepulsive As Long)
+                                                           Dim RepulsiveNodeIndex As Integer
+                                                           For RepulsiveNodeIndex = Node.Index + 1 To Graph.Nodes.Count - 1
+                                                               Dim RepulsiveNode As CGraph.CNode = Graph.Nodes(RepulsiveNodeIndex)
+                                                               Dim DeltaX = RepulsiveNode.DisplayProperties.Position.X - Node.DisplayProperties.Position.X
+                                                               Dim DeltaY = RepulsiveNode.DisplayProperties.Position.Y - Node.DisplayProperties.Position.Y
+                                                               Dim RawDistanceSquared = DeltaX * DeltaX + DeltaY * DeltaY
+                                                               If RawDistanceSquared <= 271 * 271 Then
+                                                                   Dim RawDistance As Single = Math.Max(Math.Sqrt(RawDistanceSquared), 0.1)
+                                                                   Dim Distance As Single = Math.Max(1, RawDistance - Node.DisplayProperties.Size - RepulsiveNode.DisplayProperties.Size)
+                                                                   Dim ForceMagnitude As Single
+                                                                   ForceMagnitude = Math.Min(LocalForceLimit, (AttractorPushConstant / (Distance * Distance * Distance)))
+                                                                   Dim TempForceX As Single = ForceMagnitude * (DeltaX / RawDistance)
+                                                                   Dim TempForceY As Single = ForceMagnitude * (DeltaY / RawDistance)
+                                                                   RepulsiveLocalForce.X += TempForceX
+                                                                   RepulsiveLocalForce.Y += TempForceY
+                                                                   SyncLock Force
+                                                                       Force(RepulsiveNodeIndex).X += TempForceX
+                                                                       Force(RepulsiveNodeIndex).Y += TempForceY
+                                                                   End SyncLock
+                                                               End If
+                                                           Next RepulsiveNodeIndex
+                                                           SyncLock Force
+                                                               Force(Node.Index).X -= RepulsiveLocalForce.X
+                                                               Force(Node.Index).Y -= RepulsiveLocalForce.Y
+                                                           End SyncLock
+                                                           ParallelStopwatch.Stop()
+                                                           System.Threading.Interlocked.Add(RepulsiveTime, ParallelStopwatch.ElapsedMilliseconds)
 
-            For Each OtherClusterNode As CGraph.CNode In Graph
-                If OtherClusterNode.Cluster <> Node.Cluster Then
-                    Dim RawDistance As Double = Math.Max(Math.Sqrt((OtherClusterNode.DisplayProperties.Position.X - Node.DisplayProperties.Position.X) * (OtherClusterNode.DisplayProperties.Position.X - Node.DisplayProperties.Position.X) + (OtherClusterNode.DisplayProperties.Position.Y - Node.DisplayProperties.Position.Y) * (OtherClusterNode.DisplayProperties.Position.Y - Node.DisplayProperties.Position.Y)), 0.1)
-                    Dim Distance As Double = Math.Max(1, RawDistance - Node.DisplayProperties.Size - OtherClusterNode.DisplayProperties.Size)
-                    Dim LocalForce As PointF
-                    LocalForce.X = (Math.Pow(Distance, AttractorClusterPower) * AttractorClusterConstant) * ((Node.DisplayProperties.Position.X - OtherClusterNode.DisplayProperties.Position.X) / RawDistance)
-                    LocalForce.Y = (Math.Pow(Distance, AttractorClusterPower) * AttractorClusterConstant) * ((Node.DisplayProperties.Position.Y - OtherClusterNode.DisplayProperties.Position.Y) / RawDistance)
-                    Dim LocalForceMagnitude = Math.Sqrt(LocalForce.X * LocalForce.X + LocalForce.Y * LocalForce.Y)
-                    If LocalForceMagnitude > LocalForceLimit Then
-                        LocalForce.X = (LocalForce.X / LocalForceMagnitude) * LocalForceLimit
-                        LocalForce.Y = (LocalForce.Y / LocalForceMagnitude) * LocalForceLimit
-                    End If
-                    Force(Node.Index).X -= LocalForce.X
-                    Force(Node.Index).Y -= LocalForce.Y
-                End If
-            Next
-        Next Node
+                                                           ParallelStopwatch = Stopwatch.StartNew()
+                                                           If Graph.Nodes.Count < 1000 Then
+                                                               Dim OtherClusterNodeIndex As Integer
+                                                               For OtherClusterNodeIndex = Node.Index + 1 To Graph.Nodes.Count - 1
+                                                                   Dim OtherClusterNode As CGraph.CNode = Graph.Nodes(OtherClusterNodeIndex)
+                                                                   Dim DeltaX = OtherClusterNode.DisplayProperties.Position.X - Node.DisplayProperties.Position.X
+                                                                   Dim DeltaY = OtherClusterNode.DisplayProperties.Position.Y - Node.DisplayProperties.Position.Y
+                                                                   Dim RawDistanceSquared = DeltaX * DeltaX + DeltaY * DeltaY
+                                                                   If RawDistanceSquared > 271 * 271 Then
+                                                                       Dim RawDistance As Double = Math.Max(Math.Sqrt((OtherClusterNode.DisplayProperties.Position.X - Node.DisplayProperties.Position.X) * (OtherClusterNode.DisplayProperties.Position.X - Node.DisplayProperties.Position.X) + (OtherClusterNode.DisplayProperties.Position.Y - Node.DisplayProperties.Position.Y) * (OtherClusterNode.DisplayProperties.Position.Y - Node.DisplayProperties.Position.Y)), 0.1)
+                                                                       Dim Distance As Double = Math.Max(1, RawDistance - Node.DisplayProperties.Size - OtherClusterNode.DisplayProperties.Size)
+                                                                       'Dim ForceMagnitude = (Math.Pow(Distance, AttractorClusterPower) * AttractorClusterConstant)
+                                                                       Dim ForceMagnitude As Single
+                                                                       ForceMagnitude = Math.Min(LocalForceLimit, Distance * AttractorClusterConstant)
+                                                                       Dim TempForceX As Single = ForceMagnitude * (DeltaX / RawDistance)
+                                                                       Dim TempForceY As Single = ForceMagnitude * (DeltaY / RawDistance)
+                                                                       SyncLock Force
+                                                                           Force(Node.Index).X += TempForceX
+                                                                           Force(Node.Index).Y += TempForceY
+                                                                           Force(OtherClusterNodeIndex).X -= TempForceX
+                                                                           Force(OtherClusterNodeIndex).Y -= TempForceY
+                                                                       End SyncLock
+                                                                   End If
+                                                               Next OtherClusterNodeIndex
+                                                           End If
+                                                           ParallelStopwatch.Stop()
+                                                           System.Threading.Interlocked.Add(ClusterTime, ParallelStopwatch.ElapsedMilliseconds)
+                                                       End Sub)
         For f = 0 To UBound(Force)
             Dim Node = Graph.GetNode(f)
             Node.DisplayProperties.Position.X += Force(f).X / Node.DisplayProperties.Size
             Node.DisplayProperties.Position.Y += Force(f).Y / Node.DisplayProperties.Size
         Next f
+        Stopwatch.Stop()
+        Debug.WriteLine("Sort processing time: " + Trim(Str(Stopwatch.ElapsedMilliseconds)) + "ms")
+        Debug.WriteLine("Connections time: " + Trim(Str(ConnectionsTime)) + "ms")
+        Debug.WriteLine("Repulsive time: " + Trim(Str(RepulsiveTime)) + "ms")
+        Debug.WriteLine("Cluster time: " + Trim(Str(ClusterTime)) + "ms")
     End Sub
+
 
     Friend Sub ProcessSort()
         Select Case Hl.SortMode

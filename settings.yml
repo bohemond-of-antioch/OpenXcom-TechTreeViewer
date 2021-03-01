@@ -19,22 +19,22 @@ colors:
     lookup: LightCyan
     dependencies: Blue
     requires: Red
-    getOneFree: Green
-    getOneFreeProtected: Green
-    sequentialGetOneFree: Green
-    unlocks: DarkGreen
+    #getOneFree: Green
+    #getOneFreeProtected: Green
+    #sequentialGetOneFree: Green
+    #unlocks: DarkGreen
   graph:
+    darkenedAlpha: 20
     #background: White
-    text: Black
+    #text: Black
 qualityOfLife:
   removePrefixes:
     - STR_
 sort:
-  initialIterations: 50
+  initialIterations: 100
+  autostartRealtimeSort: true
   attractors:
     pullPower: 2.5
     pullConstant: 0.001
-    pushPower: 3
     pushConstant: 20000000
-    clusterPower: 1.1
     clusterConstant: 0.0001

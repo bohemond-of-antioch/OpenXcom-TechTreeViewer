@@ -1,4 +1,5 @@
 ﻿Imports GraphEditor
+Imports TechTreeViewer
 
 Public Class MainView
     Private Enum EOperationState
@@ -19,11 +20,14 @@ Public Class MainView
         Friend LastUsedTemplate As CPropertyTemplate
         Friend KeyScrollY As Integer
         Friend KeyScrollX As Integer
+        Friend InteractedObject As CGraph.CGraphElement
     End Structure
 
 
     Dim UI As SUIControlData
     Friend NodeTextBrush As Brush
+    Friend NodeDarkenedTextBrush As Brush
+    Friend DarkenedAlpha As Integer
     Shared CenteredStringFormat As StringFormat
 
     Public Sub New()
@@ -36,7 +40,9 @@ Public Class MainView
 
     Private Sub MainView_Load(sender As Object, e As EventArgs) Handles Me.Load
         UI.Scale = 1
+        DarkenedAlpha = 20
         NodeTextBrush = Brushes.Black
+        NodeDarkenedTextBrush = New SolidBrush(Color.FromArgb(DarkenedAlpha, 0, 0, 0))
         Call Hl.Initialize()
         Call Hl.LoadSettings()
         CenteredStringFormat = New StringFormat()
@@ -49,7 +55,7 @@ Public Class MainView
         UI.GraphY = (e.Y - UI.ScrollY) / UI.Scale
         If e.Button = MouseButtons.Left Then
             Dim Node = FindNode(UI.GraphX, UI.GraphY)
-            If Not Node Is Nothing Then
+            If Not Node Is Nothing AndAlso Node.DisplayProperties.Highlighted Then
                 UI.DragState = EOperationState.Preparing
                 UI.DragNode = Node
                 UI.DragX = e.X
@@ -115,11 +121,14 @@ Public Class MainView
             If Node Is Nothing Then
                 Dim Connection = FindConnection(UI.GraphX, UI.GraphY)
                 If Connection Is Nothing Then
+                    UI.InteractedObject = Nothing
                     MenuNewNode.Show(Me, e.X, e.Y)
                 Else
+                    UI.InteractedObject = Connection
                     MenuEditNode.Show(Me, e.X, e.Y)
                 End If
             Else
+                UI.InteractedObject = Node
                 MenuEditNode.Show(Me, e.X, e.Y)
             End If
         ElseIf e.Button = MouseButtons.Left And UI.DragState = EOperationState.Active Then
@@ -206,13 +215,19 @@ Public Class MainView
         SegmentB.Y = LineY2
     End Sub
     Private Sub MainView_Paint(sender As Object, e As PaintEventArgs) Handles Me.Paint
+        Dim Stopwatch As Stopwatch = New Stopwatch()
         e.Graphics.TranslateTransform(UI.ScrollX, UI.ScrollY)
         e.Graphics.ScaleTransform(UI.Scale, UI.Scale)
+        Stopwatch.Start()
         For Each Connection As CGraph.CConnection In Graph.GetAllConnections
             Dim SegmentA, SegmentB As Point
             Dim Angle As Single
             Dim LinePen As Pen
-            LinePen = New Pen(New SolidBrush(Connection.DisplayProperties.Color))
+            If Connection.DisplayProperties.Highlighted Then
+                LinePen = New Pen(Connection.DisplayProperties.Color)
+            Else
+                LinePen = New Pen(Color.FromArgb(DarkenedAlpha, Connection.DisplayProperties.Color.R, Connection.DisplayProperties.Color.G, Connection.DisplayProperties.Color.B))
+            End If
             If Connection.NodeA = Connection.NodeB Then
                 Angle = Math.PI / 4
                 Dim Node = Graph.GetNode(Connection.NodeA)
@@ -260,8 +275,16 @@ Public Class MainView
 
             e.Graphics.Transform = PrevTransform
         Next Connection
+        Stopwatch.Stop()
+        Debug.WriteLine("Paint connections processing time: " + Trim(Str(Stopwatch.ElapsedMilliseconds)) + "ms")
+        Stopwatch.Restart()
         For Each Node As CGraph.CNode In Graph
-            Dim Pen = New Pen(New SolidBrush(Node.DisplayProperties.Color))
+            Dim Pen
+            If Node.DisplayProperties.Highlighted Then
+                Pen = New Pen(Node.DisplayProperties.Color)
+            Else
+                Pen = New Pen(Color.FromArgb(DarkenedAlpha, Node.DisplayProperties.Color.R, Node.DisplayProperties.Color.G, Node.DisplayProperties.Color.B))
+            End If
             e.Graphics.DrawEllipse(Pen, CType(Node.DisplayProperties.Position.X - Node.DisplayProperties.Size, Integer), CType(Node.DisplayProperties.Position.Y - Node.DisplayProperties.Size, Integer), Node.DisplayProperties.Size * 2, Node.DisplayProperties.Size * 2)
             Select Case Node.DisplayProperties.Decoration
                 Case CGraph.EDecoration.Square
@@ -286,18 +309,26 @@ Public Class MainView
                     e.Graphics.DrawLine(Pen, V2x, V2y, V3x, V3y)
                     e.Graphics.DrawLine(Pen, V1x, V1y, V3x, V3y)
             End Select
+
             Dim DisplayedProperty As Integer
             DisplayedProperty = 0
-
             For Each PropertyName As String In Node.DisplayProperties.ShownProperties
                 For Each P In Node.Properties
                     If P.Key = PropertyName Then
-                        e.Graphics.DrawString(P.Value, Me.Font, NodeTextBrush, New Rectangle(Node.DisplayProperties.Position.X - 250, Node.DisplayProperties.Position.Y + Node.DisplayProperties.Size + 5 + DisplayedProperty * 15, 500, 50), CenteredStringFormat)
+                        Dim TextBrush As Brush
+                        If Node.DisplayProperties.Highlighted Then
+                            TextBrush = NodeTextBrush
+                        Else
+                            TextBrush = NodeDarkenedTextBrush
+                        End If
+                        e.Graphics.DrawString(P.Value, Me.Font, TextBrush, New Rectangle(Node.DisplayProperties.Position.X - 250, Node.DisplayProperties.Position.Y + Node.DisplayProperties.Size + 5 + DisplayedProperty * 15, 500, 50), CenteredStringFormat)
                         DisplayedProperty += 1
                     End If
                 Next
             Next
         Next Node
+        Stopwatch.Stop()
+        Debug.WriteLine("Paint nodes processing time: " + Trim(Str(Stopwatch.ElapsedMilliseconds)) + "ms")
         If UI.ConnectState = EOperationState.Active Then
             Dim LineX1, LineY1, LineX2, LineY2 As Integer
             LineX1 = UI.ConnectNodeA.DisplayProperties.Position.X
@@ -343,8 +374,20 @@ Public Class MainView
             UI.KeyScrollX = -1
         End If
     End Sub
-
+    Private Sub ChangeZoom(Value As Double)
+        Dim PreviousScale As Double
+        PreviousScale = UI.Scale
+        UI.Scale += Value
+        If UI.Scale < 0.1 Then UI.Scale = 0.1
+        UI.ScrollX -= (Me.Width / 2 - UI.ScrollX) / PreviousScale * (UI.Scale) - Me.Width / 2 + UI.ScrollX
+        UI.ScrollY -= (Me.Height / 2 - UI.ScrollY) / PreviousScale * (UI.Scale) - Me.Height / 2 + UI.ScrollY
+        Me.Refresh()
+    End Sub
     Private Sub MainView_KeyUp(sender As Object, e As KeyEventArgs) Handles Me.KeyUp
+        If e.KeyCode = Keys.Space Then
+            SetHighlights(True)
+            Me.Refresh()
+        End If
         If e.KeyCode = Keys.Down Then
             UI.KeyScrollY = 0
         End If
@@ -365,21 +408,10 @@ Public Class MainView
             End If
         End If
         If e.KeyCode = Keys.Add Then
-            Dim PreviousScale As Double
-            PreviousScale = UI.Scale
-            UI.Scale += 0.1
-            UI.ScrollX -= (Me.Width / 2 - UI.ScrollX) / PreviousScale * (UI.Scale) - Me.Width / 2 + UI.ScrollX
-            UI.ScrollY -= (Me.Height / 2 - UI.ScrollY) / PreviousScale * (UI.Scale) - Me.Height / 2 + UI.ScrollY
-            Me.Refresh()
+            ChangeZoom(0.1)
         End If
         If e.KeyCode = Keys.Subtract Then
-            Dim PreviousScale As Double
-            PreviousScale = UI.Scale
-            UI.Scale -= 0.1
-            If UI.Scale < 0.1 Then UI.Scale = 0.1
-            UI.ScrollX -= (Me.Width / 2 - UI.ScrollX) / PreviousScale * (UI.Scale) - Me.Width / 2 + UI.ScrollX
-            UI.ScrollY -= (Me.Height / 2 - UI.ScrollY) / PreviousScale * (UI.Scale) - Me.Height / 2 + UI.ScrollY
-            Me.Refresh()
+            ChangeZoom(-0.1)
         End If
     End Sub
     Private Function FindNode(X As Integer, Y As Integer) As CGraph.CNode
@@ -392,21 +424,31 @@ Public Class MainView
     End Function
 
     Private Sub MenuEditNodeRemove_Click(sender As Object, e As EventArgs) Handles MenuEditNodeRemove.Click
-        Dim Node = FindNode(UI.GraphX, UI.GraphY)
-        If Node Is Nothing Then
-            Dim Connection = FindConnection(UI.GraphX, UI.GraphY)
-            If Not Connection Is Nothing Then
-                If MsgBox("Are you sure you want to remove the CONNECTION?", MsgBoxStyle.YesNo, "Graph editor") = MsgBoxResult.Yes Then
-                    Graph.Disconnect(Connection)
-                    Call InvalidateFile()
-                    Me.Refresh()
-                End If
-            End If
-        Else
-            If MsgBox("Are you sure you want to remove the NODE?", MsgBoxStyle.YesNo, "Graph editor") = MsgBoxResult.Yes Then
-                Graph.Remove(Node)
+        If UI.InteractedObject Is Nothing Then Exit Sub
+        If TypeOf UI.InteractedObject Is CGraph.CConnection Then
+            Dim Connection As CGraph.CConnection = UI.InteractedObject
+            If MsgBox("Are you sure you want to remove the CONNECTION?", MsgBoxStyle.YesNo, "Graph editor") = MsgBoxResult.Yes Then
+                Graph.Disconnect(Connection)
                 Call InvalidateFile()
                 Me.Refresh()
+            End If
+        End If
+        If TypeOf UI.InteractedObject Is CGraph.CNode Then
+            If MsgBox("Are you sure you want to remove the NODE?", MsgBoxStyle.YesNo, "Graph editor") = MsgBoxResult.Yes Then
+                Graph.Remove(UI.InteractedObject)
+                Call InvalidateFile()
+                Me.Refresh()
+            End If
+        End If
+    End Sub
+
+    Private Sub MainView_MouseClick(sender As Object, e As MouseEventArgs) Handles Me.MouseClick
+        UI.GraphX = (e.X - UI.ScrollX) / UI.Scale
+        UI.GraphY = (e.Y - UI.ScrollY) / UI.Scale
+        If e.Button = MouseButtons.Left And ModifierKeys = Keys.Shift Then
+            Dim Node = FindNode(UI.GraphX, UI.GraphY)
+            If Not Node Is Nothing AndAlso Node.DisplayProperties.Highlighted Then
+                HighlightNeighborhood(Node, 1)
             End If
         End If
     End Sub
@@ -438,16 +480,9 @@ Public Class MainView
     End Sub
 
     Private Sub MenuEditNodeProperties_Click(sender As Object, e As EventArgs) Handles MenuEditNodeProperties.Click
-        Dim Node = FindNode(UI.GraphX, UI.GraphY)
-        If Node Is Nothing Then
-            Dim Connection = FindConnection(UI.GraphX, UI.GraphY)
-            If Not Connection Is Nothing Then
-                EditProperties.DisplayDialog(Connection)
-            End If
-        Else
-            EditProperties.DisplayDialog(Node)
+        If Not UI.InteractedObject Is Nothing Then
+            EditProperties.DisplayDialog(UI.InteractedObject)
         End If
-
     End Sub
 
     Private Sub ExitToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ExitToolStripMenuItem.Click
@@ -631,27 +666,25 @@ Public Class MainView
     End Sub
 
     Private Sub MenuEditNode_HandleApplyTemplate(sender As Object, e As EventArgs)
+        If UI.InteractedObject Is Nothing Then Exit Sub
         Dim Index As Integer = 0
-        Dim Node = FindNode(UI.GraphX, UI.GraphY)
-        If Node Is Nothing Then
-            Dim Connection = FindConnection(UI.GraphX, UI.GraphY)
-            If Not Connection Is Nothing Then
-                Dim UseTemplate As CPropertyTemplate = Nothing
-                For Each Template As CPropertyTemplate In Hl.TemplateStorage
-                    If Template.AppliesToConnections Then
-                        If Index = Val(sender.tag) Then
-                            UseTemplate = Template
-                            Exit For
-                        End If
-                        Index += 1
+        If TypeOf UI.InteractedObject Is CGraph.CConnection Then
+            Dim UseTemplate As CPropertyTemplate = Nothing
+            For Each Template As CPropertyTemplate In Hl.TemplateStorage
+                If Template.AppliesToConnections Then
+                    If Index = Val(sender.tag) Then
+                        UseTemplate = Template
+                        Exit For
                     End If
-                Next Template
-                If UseTemplate Is Nothing Then Exit Sub
-                Connection.ApplyTemplate(UseTemplate)
-                Call InvalidateFile()
-                Me.Refresh()
-            End If
-        Else
+                    Index += 1
+                End If
+            Next Template
+            If UseTemplate Is Nothing Then Exit Sub
+            UI.InteractedObject.ApplyTemplate(UseTemplate)
+            Call InvalidateFile()
+            Me.Refresh()
+        End If
+        If TypeOf UI.InteractedObject Is CGraph.CNode Then
             Dim UseTemplate As CPropertyTemplate = Nothing
             For Each Template As CPropertyTemplate In Hl.TemplateStorage
                 If Template.AppliesToNodes Then
@@ -663,7 +696,7 @@ Public Class MainView
                 End If
             Next Template
             If UseTemplate Is Nothing Then Exit Sub
-            Node.ApplyTemplate(UseTemplate)
+            UI.InteractedObject.ApplyTemplate(UseTemplate)
             Call InvalidateFile()
             Me.Refresh()
         End If
@@ -725,5 +758,63 @@ Public Class MainView
         If UI.KeyScrollX <> 0 Or UI.KeyScrollY <> 0 Then
             Me.Refresh()
         End If
+    End Sub
+
+    Private Sub MainView_MouseWheel(sender As Object, e As MouseEventArgs) Handles Me.MouseWheel
+        If e.Delta <> 0 Then
+            ChangeZoom(e.Delta / SystemInformation.MouseWheelScrollDelta * 0.1)
+        End If
+    End Sub
+
+    Private Sub MenuEditHighlightNeigborhood1_Click(sender As Object, e As EventArgs) Handles MenuEditHighlightNeigborhood1.Click
+        HighlightNeighborhood(UI.InteractedObject, 1)
+    End Sub
+
+    Private Sub MenuEditHighlightNeigborhood2_Click(sender As Object, e As EventArgs) Handles MenuEditHighlightNeigborhood2.Click
+        HighlightNeighborhood(UI.InteractedObject, 2)
+    End Sub
+
+    Private Sub MenuEditHighlightNeigborhood3_Click(sender As Object, e As EventArgs) Handles MenuEditHighlightNeigborhood3.Click
+        HighlightNeighborhood(UI.InteractedObject, 3)
+    End Sub
+
+    Private Sub MenuEditHighlightNeigborhood4_Click(sender As Object, e As EventArgs) Handles MenuEditHighlightNeigborhood4.Click
+        HighlightNeighborhood(UI.InteractedObject, 4)
+    End Sub
+
+    Private Sub MenuEditHighlightNeigborhood5_Click(sender As Object, e As EventArgs) Handles MenuEditHighlightNeigborhood5.Click
+        HighlightNeighborhood(UI.InteractedObject, 5)
+    End Sub
+
+    Private Sub HighlightNeighborhood(ByRef RootNode As CGraph.CNode, Depth As Integer)
+        If RootNode Is Nothing OrElse Not TypeOf RootNode Is CGraph.CNode Then Exit Sub
+        SetHighlights(False)
+        HighlighNeighborhoodTraverse(RootNode, Depth)
+        Me.Refresh()
+    End Sub
+    Private Sub HighlighNeighborhoodTraverse(ByRef Node As CGraph.CNode, Depth As Integer)
+        Node.DisplayProperties.Highlighted = True
+        If Depth = 0 Then Exit Sub
+        For Each Connection In Graph.GetConnections(Node.Index)
+            Connection.DisplayProperties.Highlighted = True
+            If Node.Index = Connection.NodeA Then
+                HighlighNeighborhoodTraverse(Graph.GetNode(Connection.NodeB), Depth - 1)
+            Else
+                HighlighNeighborhoodTraverse(Graph.GetNode(Connection.NodeA), Depth - 1)
+            End If
+        Next Connection
+    End Sub
+
+    Private Sub ClearHighlightToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ClearHighlightToolStripMenuItem.Click
+        SetHighlights(True)
+    End Sub
+
+    Private Shared Sub SetHighlights(Value As Boolean)
+        For Each Node As CGraph.CNode In Graph
+            Node.DisplayProperties.Highlighted = Value
+        Next Node
+        For Each Connection As CGraph.CConnection In Graph.GetAllConnections
+            Connection.DisplayProperties.Highlighted = Value
+        Next Connection
     End Sub
 End Class
