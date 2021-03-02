@@ -41,6 +41,7 @@ Public Class MainView
     Private Sub MainView_Load(sender As Object, e As EventArgs) Handles Me.Load
         UI.Scale = 1
         DarkenedAlpha = 20
+        ComboBoxSearchHighlight.SelectedIndex = 1
         NodeTextBrush = Brushes.Black
         NodeDarkenedTextBrush = New SolidBrush(Color.FromArgb(DarkenedAlpha, 0, 0, 0))
         Call Hl.Initialize()
@@ -384,8 +385,18 @@ Public Class MainView
         Me.Refresh()
     End Sub
     Private Sub MainView_KeyUp(sender As Object, e As KeyEventArgs) Handles Me.KeyUp
+        If e.KeyCode = Keys.F3 And ModifierKeys = Keys.None Then
+            SearchNext()
+        End If
+        If e.KeyCode = Keys.F3 And ModifierKeys = Keys.Shift Then
+            SearchPrevious()
+        End If
+        If e.KeyCode = Keys.F And ModifierKeys = Keys.Control Then
+            ToggleSearch()
+        End If
         If e.KeyCode = Keys.Space Then
             SetHighlights(True)
+            e.Handled = True
             Me.Refresh()
         End If
         If e.KeyCode = Keys.Down Then
@@ -414,6 +425,7 @@ Public Class MainView
             ChangeZoom(-0.1)
         End If
     End Sub
+
     Private Function FindNode(X As Integer, Y As Integer) As CGraph.CNode
         For Each Node As CGraph.CNode In Graph
             If (Node.DisplayProperties.Position.X - X) * (Node.DisplayProperties.Position.X - X) + (Node.DisplayProperties.Position.Y - Y) * (Node.DisplayProperties.Position.Y - Y) <= Node.DisplayProperties.Size * Node.DisplayProperties.Size Then
@@ -744,8 +756,8 @@ Public Class MainView
             Center.X = Center.X / Graph.Nodes.Count
             Center.Y = Center.Y / Graph.Nodes.Count
         End If
-        UI.ScrollX = Me.Width / 2 - Center.X
-        UI.ScrollY = Me.Height / 2 - Center.Y
+        UI.ScrollX = Me.Width / 2 - Center.X * UI.Scale
+        UI.ScrollY = Me.Height / 2 - Center.Y * UI.Scale
     End Sub
 
     Private Sub KeyScrollTimer_Tick(sender As Object, e As EventArgs) Handles KeyScrollTimer.Tick
@@ -816,5 +828,93 @@ Public Class MainView
         For Each Connection As CGraph.CConnection In Graph.GetAllConnections
             Connection.DisplayProperties.Highlighted = Value
         Next Connection
+    End Sub
+    Private Sub ToggleSearch()
+        GroupBoxSearch.Visible = Not GroupBoxSearch.Visible
+        If (GroupBoxSearch.Visible) Then
+            TextBoxSearch.Focus()
+        Else
+            Me.Focus()
+        End If
+    End Sub
+    Private Sub SearchToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles SearchToolStripMenuItem.Click
+        ToggleSearch()
+    End Sub
+    Private SearchFoundNodes As List(Of CGraph.CNode)
+    Private SearchCurrentNode As CGraph.CNode
+    Private Sub SeekNodes(Pattern As String)
+        SearchFoundNodes = New List(Of CGraph.CNode)
+        For Each Node As CGraph.CNode In Graph
+            Dim NodeName As String = Node.GetProperty("Name")
+            If Not NodeName Is Nothing AndAlso System.Text.RegularExpressions.Regex.IsMatch(NodeName, Pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase) Then
+                SearchFoundNodes.Add(Node)
+            End If
+        Next Node
+        LabelSearchOccurences.Text = "Occurences: " + Trim(Str(SearchFoundNodes.Count))
+        If SearchFoundNodes.Count = 0 Then
+            LabelSearchMessage.Text = "No nodes match search criteria"
+            LabelSearchMessage.ForeColor = Color.Red
+            SearchCurrentNode = Nothing
+        Else
+            LabelSearchMessage.Text = ""
+            SearchNextOrCurrent()
+        End If
+    End Sub
+    Private Sub TextBoxSearch_TextChanged(sender As Object, e As EventArgs) Handles TextBoxSearch.TextChanged
+        SeekNodes(TextBoxSearch.Text)
+    End Sub
+
+    Private Sub CenterAtNode(Node As CGraph.CNode)
+        UI.ScrollX = Me.Width / 2 - Node.DisplayProperties.Position.X * UI.Scale
+        UI.ScrollY = Me.Height / 2 - Node.DisplayProperties.Position.Y * UI.Scale
+    End Sub
+
+    Private Sub SearchNextOrCurrent()
+        If SearchFoundNodes.Count = 0 Then Exit Sub
+        If SearchFoundNodes.Contains(SearchCurrentNode) Then
+            CenterAtNode(SearchCurrentNode)
+        Else
+            SearchNext()
+        End If
+    End Sub
+
+    Private Sub SearchNext()
+        If SearchFoundNodes.Count = 0 Then Exit Sub
+        Dim CurrentIndex = SearchFoundNodes.IndexOf(SearchCurrentNode)
+        If CurrentIndex = SearchFoundNodes.Count - 1 Then
+            CurrentIndex = -1
+            LabelSearchMessage.Text = "Passed the last node"
+            LabelSearchMessage.ForeColor = Color.DarkGreen
+        Else
+            LabelSearchMessage.Text = ""
+        End If
+        SearchCurrentNode = SearchFoundNodes(CurrentIndex + 1)
+        CenterAtNode(SearchCurrentNode)
+        HighlightNeighborhood(SearchCurrentNode, ComboBoxSearchHighlight.SelectedIndex)
+        SearchCurrentNode.DisplayProperties.Highlighted = True
+    End Sub
+
+    Private Sub SearchPrevious()
+        If SearchFoundNodes.Count = 0 Then Exit Sub
+        Dim CurrentIndex = SearchFoundNodes.IndexOf(SearchCurrentNode)
+        If CurrentIndex = 0 Then
+            CurrentIndex = SearchFoundNodes.Count
+            LabelSearchMessage.Text = "Passed the first node"
+            LabelSearchMessage.ForeColor = Color.DarkGreen
+        Else
+            LabelSearchMessage.Text = ""
+        End If
+        SearchCurrentNode = SearchFoundNodes(CurrentIndex - 1)
+        CenterAtNode(SearchCurrentNode)
+        HighlightNeighborhood(SearchCurrentNode, ComboBoxSearchHighlight.SelectedIndex)
+        SearchCurrentNode.DisplayProperties.Highlighted = True
+    End Sub
+
+    Private Sub ButtonSearchNext_Click(sender As Object, e As EventArgs) Handles ButtonSearchNext.Click
+        SearchNext()
+    End Sub
+
+    Private Sub ButtonSearchPrevious_Click(sender As Object, e As EventArgs) Handles ButtonSearchPrevious.Click
+        SearchPrevious()
     End Sub
 End Class

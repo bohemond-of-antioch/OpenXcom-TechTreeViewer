@@ -121,10 +121,10 @@ Public Class YamlFileParser
                     End If
                     Node.AddItem(ParsedNode)
                 Catch ex As YamlNode.WrongYamlNodeException
-                    MsgBox("There was an error parsing a .rul file." + vbCrLf + "File: " + FileName + vbCrLf + "Around line: " + Trim(Str(CurrentLineNumber)) + vbCrLf + "Reason: " + ex.Message, MsgBoxStyle.Exclamation, "Nodes skipped")
+                    MsgBox("There was an error parsing a yaml file." + vbCrLf + "File: " + FileName + vbCrLf + "Around line: " + Trim(Str(CurrentLineNumber)) + vbCrLf + "Reason: " + ex.Message, MsgBoxStyle.Exclamation, "Nodes skipped")
                     Return Nothing
                 Catch ex As InvalidSyntaxException
-                    MsgBox("There was an error parsing a .rul file." + vbCrLf + "File: " + FileName + vbCrLf + "Around line: " + Trim(Str(CurrentLineNumber)) + vbCrLf + "Reason: " + ex.Message, MsgBoxStyle.Exclamation, "Nodes skipped")
+                    MsgBox("There was an error parsing a yaml file." + vbCrLf + "File: " + FileName + vbCrLf + "Around line: " + Trim(Str(CurrentLineNumber)) + vbCrLf + "Reason: " + ex.Message, MsgBoxStyle.Exclamation, "Nodes skipped")
                     Return Nothing
                 End Try
             ElseIf System.Text.RegularExpressions.Regex.IsMatch(UnindentedLine, EXPR_YAML_SEQUENCE_REFERENCE) Then
@@ -132,14 +132,20 @@ Public Class YamlFileParser
                 Try
                     Node.AddItem(GetAnchor(Matches(0).Groups(1).Value))
                 Catch ex As YamlNode.WrongYamlNodeException
-                    MsgBox("There was an error parsing a .rul file." + vbCrLf + "File: " + FileName + vbCrLf + "Around line: " + Trim(Str(CurrentLineNumber)) + vbCrLf + "Reason: " + ex.Message, MsgBoxStyle.Exclamation, "Nodes skipped")
+                    MsgBox("There was an error parsing a yaml file." + vbCrLf + "File: " + FileName + vbCrLf + "Around line: " + Trim(Str(CurrentLineNumber)) + vbCrLf + "Reason: " + ex.Message, MsgBoxStyle.Exclamation, "Nodes skipped")
                     Return Nothing
                 End Try
             ElseIf System.Text.RegularExpressions.Regex.IsMatch(UnindentedLine, EXPR_YAML_SEQUENCE) Then
                 Try
-                    Node.AddItem(ParseNodeFromLine(Indent + 2, Indent + 2))
+                    Dim LocalStupidIndent As Integer
+                    If CurrentLine(Indent + 2) = "-" Then
+                        LocalStupidIndent = Indent + 3
+                    Else
+                        LocalStupidIndent = Indent + 2
+                    End If
+                    Node.AddItem(ParseNodeFromLine(Indent + 2, LocalStupidIndent))
                 Catch ex As YamlNode.WrongYamlNodeException
-                    MsgBox("There was an error parsing a .rul file." + vbCrLf + "File: " + FileName + vbCrLf + "Around line: " + Trim(Str(CurrentLineNumber)) + vbCrLf + "Reason: " + ex.Message, MsgBoxStyle.Exclamation, "Nodes skipped")
+                    MsgBox("There was an error parsing a yaml file." + vbCrLf + "File: " + FileName + vbCrLf + "Around line: " + Trim(Str(CurrentLineNumber)) + vbCrLf + "Reason: " + ex.Message, MsgBoxStyle.Exclamation, "Nodes skipped")
                     Return Nothing
                 End Try
             ElseIf System.Text.RegularExpressions.Regex.IsMatch(UnindentedLine, EXPR_YAML_MAPPING_REFERENCE) Then
@@ -147,7 +153,7 @@ Public Class YamlFileParser
                 Try
                     Node.SetMapping(Matches(0).Groups(1).Value, GetAnchor(Matches(0).Groups(2).Value))
                 Catch ex As YamlNode.WrongYamlNodeException
-                    MsgBox("There was an error parsing a .rul file." + vbCrLf + "File: " + FileName + vbCrLf + "Around line: " + Trim(Str(CurrentLineNumber)) + vbCrLf + "Reason: " + ex.Message, MsgBoxStyle.Exclamation, "Nodes skipped")
+                    MsgBox("There was an error parsing a yaml file." + vbCrLf + "File: " + FileName + vbCrLf + "Around line: " + Trim(Str(CurrentLineNumber)) + vbCrLf + "Reason: " + ex.Message, MsgBoxStyle.Exclamation, "Nodes skipped")
                     Return Nothing
                 End Try
             ElseIf System.Text.RegularExpressions.Regex.IsMatch(UnindentedLine, EXPR_YAML_MAPPING) Then
@@ -159,10 +165,10 @@ Public Class YamlFileParser
                     End If
                     Node.SetMapping(Matches(0).Groups(1).Value, ParsedNode)
                 Catch ex As YamlNode.WrongYamlNodeException
-                    MsgBox("There was an error parsing a .rul file." + vbCrLf + "File: " + FileName + vbCrLf + "Around line: " + Trim(Str(CurrentLineNumber)) + vbCrLf + "Reason: " + ex.Message, MsgBoxStyle.Exclamation, "Nodes skipped")
+                    MsgBox("There was an error parsing a yaml file." + vbCrLf + "File: " + FileName + vbCrLf + "Around line: " + Trim(Str(CurrentLineNumber)) + vbCrLf + "Reason: " + ex.Message, MsgBoxStyle.Exclamation, "Nodes skipped")
                     Return Nothing
                 Catch ex As InvalidSyntaxException
-                    MsgBox("There was an error parsing a .rul file." + vbCrLf + "File: " + FileName + vbCrLf + "Around line: " + Trim(Str(CurrentLineNumber)) + vbCrLf + "Reason: " + ex.Message, MsgBoxStyle.Exclamation, "Nodes skipped")
+                    MsgBox("There was an error parsing a yaml file." + vbCrLf + "File: " + FileName + vbCrLf + "Around line: " + Trim(Str(CurrentLineNumber)) + vbCrLf + "Reason: " + ex.Message, MsgBoxStyle.Exclamation, "Nodes skipped")
                     Return Nothing
                 End Try
             ElseIf System.Text.RegularExpressions.Regex.IsMatch(UnindentedLine, EXPR_YAML_INLINE_MAPPING) Then
@@ -174,7 +180,7 @@ Public Class YamlFileParser
                 Try
                     Node.SetMapping(Matches(0).Groups(1).Value, ParsedNode)
                 Catch ex As YamlNode.WrongYamlNodeException
-                    MsgBox("There was an error parsing a .rul file." + vbCrLf + "File: " + FileName + vbCrLf + "Around line: " + Trim(Str(CurrentLineNumber)) + vbCrLf + "Reason: " + ex.Message, MsgBoxStyle.Exclamation, "Nodes skipped")
+                    MsgBox("There was an error parsing a yaml file." + vbCrLf + "File: " + FileName + vbCrLf + "Around line: " + Trim(Str(CurrentLineNumber)) + vbCrLf + "Reason: " + ex.Message, MsgBoxStyle.Exclamation, "Nodes skipped")
                     Return Nothing
                 End Try
             End If

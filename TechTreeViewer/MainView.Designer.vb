@@ -49,6 +49,7 @@ Partial Class MainView
         Me.StopSortToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.ToolStripMenuItem6 = New System.Windows.Forms.ToolStripSeparator()
         Me.ClearHighlightToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.SearchToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.MenuEditNode = New System.Windows.Forms.ContextMenuStrip(Me.components)
         Me.MenuEditNodeProperties = New System.Windows.Forms.ToolStripMenuItem()
         Me.MenuEditNodeApplyTemplate = New System.Windows.Forms.ToolStripMenuItem()
@@ -64,10 +65,18 @@ Partial Class MainView
         Me.MenuEditHighlightNeigborhood5 = New System.Windows.Forms.ToolStripMenuItem()
         Me.SortTimer = New System.Windows.Forms.Timer(Me.components)
         Me.KeyScrollTimer = New System.Windows.Forms.Timer(Me.components)
-        Me.SearchToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.GroupBoxSearch = New System.Windows.Forms.GroupBox()
+        Me.LabelSearchMessage = New System.Windows.Forms.Label()
+        Me.LabelSearchOccurences = New System.Windows.Forms.Label()
+        Me.ButtonSearchPrevious = New System.Windows.Forms.Button()
+        Me.ButtonSearchNext = New System.Windows.Forms.Button()
+        Me.TextBoxSearch = New System.Windows.Forms.TextBox()
+        Me.Label1 = New System.Windows.Forms.Label()
+        Me.ComboBoxSearchHighlight = New System.Windows.Forms.ComboBox()
         Me.MenuNewNode.SuspendLayout()
         Me.ProgramMenu.SuspendLayout()
         Me.MenuEditNode.SuspendLayout()
+        Me.GroupBoxSearch.SuspendLayout()
         Me.SuspendLayout()
         '
         'MenuNewNode
@@ -235,6 +244,12 @@ Partial Class MainView
         Me.ClearHighlightToolStripMenuItem.Size = New System.Drawing.Size(187, 22)
         Me.ClearHighlightToolStripMenuItem.Text = "Clear Highlights (Space)"
         '
+        'SearchToolStripMenuItem
+        '
+        Me.SearchToolStripMenuItem.Name = "SearchToolStripMenuItem"
+        Me.SearchToolStripMenuItem.Size = New System.Drawing.Size(187, 22)
+        Me.SearchToolStripMenuItem.Text = "Search (Control-F)"
+        '
         'MenuEditNode
         '
         Me.MenuEditNode.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.MenuEditNodeProperties, Me.MenuEditNodeApplyTemplate, Me.ToolStripMenuItem2, Me.MenuEditNodeRemove, Me.ToolStripMenuItem5, Me.MenuEditHighlightNeigborhood})
@@ -322,19 +337,93 @@ Partial Class MainView
         Me.KeyScrollTimer.Enabled = True
         Me.KeyScrollTimer.Interval = 10
         '
-        'SearchToolStripMenuItem
+        'GroupBoxSearch
         '
-        Me.SearchToolStripMenuItem.Name = "SearchToolStripMenuItem"
-        Me.SearchToolStripMenuItem.Size = New System.Drawing.Size(187, 22)
-        Me.SearchToolStripMenuItem.Text = "Search (F3)"
+        Me.GroupBoxSearch.Controls.Add(Me.ComboBoxSearchHighlight)
+        Me.GroupBoxSearch.Controls.Add(Me.Label1)
+        Me.GroupBoxSearch.Controls.Add(Me.LabelSearchMessage)
+        Me.GroupBoxSearch.Controls.Add(Me.LabelSearchOccurences)
+        Me.GroupBoxSearch.Controls.Add(Me.ButtonSearchPrevious)
+        Me.GroupBoxSearch.Controls.Add(Me.ButtonSearchNext)
+        Me.GroupBoxSearch.Controls.Add(Me.TextBoxSearch)
+        Me.GroupBoxSearch.Location = New System.Drawing.Point(0, 24)
+        Me.GroupBoxSearch.Name = "GroupBoxSearch"
+        Me.GroupBoxSearch.Size = New System.Drawing.Size(200, 112)
+        Me.GroupBoxSearch.TabIndex = 2
+        Me.GroupBoxSearch.TabStop = False
+        Me.GroupBoxSearch.Text = "Search"
+        Me.GroupBoxSearch.Visible = False
+        '
+        'LabelSearchMessage
+        '
+        Me.LabelSearchMessage.AutoSize = True
+        Me.LabelSearchMessage.Location = New System.Drawing.Point(8, 88)
+        Me.LabelSearchMessage.Name = "LabelSearchMessage"
+        Me.LabelSearchMessage.Size = New System.Drawing.Size(0, 13)
+        Me.LabelSearchMessage.TabIndex = 4
+        '
+        'LabelSearchOccurences
+        '
+        Me.LabelSearchOccurences.AutoSize = True
+        Me.LabelSearchOccurences.Location = New System.Drawing.Point(8, 72)
+        Me.LabelSearchOccurences.Name = "LabelSearchOccurences"
+        Me.LabelSearchOccurences.Size = New System.Drawing.Size(68, 13)
+        Me.LabelSearchOccurences.TabIndex = 3
+        Me.LabelSearchOccurences.Text = "Occurences:"
+        '
+        'ButtonSearchPrevious
+        '
+        Me.ButtonSearchPrevious.Location = New System.Drawing.Point(8, 40)
+        Me.ButtonSearchPrevious.Name = "ButtonSearchPrevious"
+        Me.ButtonSearchPrevious.Size = New System.Drawing.Size(75, 23)
+        Me.ButtonSearchPrevious.TabIndex = 2
+        Me.ButtonSearchPrevious.Text = "Previous"
+        Me.ButtonSearchPrevious.UseVisualStyleBackColor = True
+        '
+        'ButtonSearchNext
+        '
+        Me.ButtonSearchNext.Location = New System.Drawing.Point(120, 40)
+        Me.ButtonSearchNext.Name = "ButtonSearchNext"
+        Me.ButtonSearchNext.Size = New System.Drawing.Size(75, 23)
+        Me.ButtonSearchNext.TabIndex = 1
+        Me.ButtonSearchNext.Text = "Next"
+        Me.ButtonSearchNext.UseVisualStyleBackColor = True
+        '
+        'TextBoxSearch
+        '
+        Me.TextBoxSearch.Location = New System.Drawing.Point(8, 16)
+        Me.TextBoxSearch.Name = "TextBoxSearch"
+        Me.TextBoxSearch.Size = New System.Drawing.Size(184, 20)
+        Me.TextBoxSearch.TabIndex = 0
+        '
+        'Label1
+        '
+        Me.Label1.AutoSize = True
+        Me.Label1.Location = New System.Drawing.Point(120, 72)
+        Me.Label1.Name = "Label1"
+        Me.Label1.Size = New System.Drawing.Size(48, 13)
+        Me.Label1.TabIndex = 5
+        Me.Label1.Text = "Highlight"
+        '
+        'ComboBoxSearchHighlight
+        '
+        Me.ComboBoxSearchHighlight.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
+        Me.ComboBoxSearchHighlight.FormattingEnabled = True
+        Me.ComboBoxSearchHighlight.Items.AddRange(New Object() {"0", "1", "2", "3", "4", "5"})
+        Me.ComboBoxSearchHighlight.Location = New System.Drawing.Point(120, 88)
+        Me.ComboBoxSearchHighlight.Name = "ComboBoxSearchHighlight"
+        Me.ComboBoxSearchHighlight.Size = New System.Drawing.Size(72, 21)
+        Me.ComboBoxSearchHighlight.TabIndex = 6
         '
         'MainView
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.ClientSize = New System.Drawing.Size(714, 613)
+        Me.Controls.Add(Me.GroupBoxSearch)
         Me.Controls.Add(Me.ProgramMenu)
         Me.DoubleBuffered = True
+        Me.KeyPreview = True
         Me.MainMenuStrip = Me.ProgramMenu
         Me.Name = "MainView"
         Me.Text = "Graph"
@@ -343,6 +432,8 @@ Partial Class MainView
         Me.ProgramMenu.ResumeLayout(False)
         Me.ProgramMenu.PerformLayout()
         Me.MenuEditNode.ResumeLayout(False)
+        Me.GroupBoxSearch.ResumeLayout(False)
+        Me.GroupBoxSearch.PerformLayout()
         Me.ResumeLayout(False)
         Me.PerformLayout()
 
@@ -390,4 +481,12 @@ Partial Class MainView
     Friend WithEvents ToolStripMenuItem6 As ToolStripSeparator
     Friend WithEvents ClearHighlightToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents SearchToolStripMenuItem As ToolStripMenuItem
+    Friend WithEvents GroupBoxSearch As GroupBox
+    Friend WithEvents LabelSearchOccurences As Label
+    Friend WithEvents ButtonSearchPrevious As Button
+    Friend WithEvents ButtonSearchNext As Button
+    Friend WithEvents TextBoxSearch As TextBox
+    Friend WithEvents LabelSearchMessage As Label
+    Friend WithEvents ComboBoxSearchHighlight As ComboBox
+    Friend WithEvents Label1 As Label
 End Class

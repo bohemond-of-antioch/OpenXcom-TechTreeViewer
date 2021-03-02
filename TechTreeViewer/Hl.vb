@@ -209,8 +209,8 @@
             LastCreatedNode = Graph.Add(NodeTemplate)
             LastCreatedNode.SetProperty("RawName", Research.Name)
             LastCreatedNode.SetProperty("Name", RemovePrefixesFromString(Research.Name, RemovePrefixes))
-            LastCreatedNode.DisplayProperties.Position.X = CoordsRandomizer.NextDouble() * 500 - 250
-            LastCreatedNode.DisplayProperties.Position.Y = CoordsRandomizer.NextDouble() * 500 - 250
+            LastCreatedNode.DisplayProperties.Position.X = CoordsRandomizer.NextDouble() * AllResearch.Count * 2 - AllResearch.Count
+            LastCreatedNode.DisplayProperties.Position.Y = CoordsRandomizer.NextDouble() * AllResearch.Count * 2 - AllResearch.Count
 
             LastCreatedNode.SetProperty("ListOrder", Research.ListOrder)
             'LastCreatedNode.DisplayProperties.ShownProperties.Add("ListOrder")
@@ -466,7 +466,9 @@ ZaTo:
     Private Sub SortAttractors()
         Dim Force() As PointF
         ReDim Force(Graph.Nodes.Count - 1)
+#If DEBUG Then
         Dim Stopwatch As Stopwatch = Stopwatch.StartNew()
+#End If
         Dim ConnectionsTime As Long = 0
         Dim RepulsiveTime As Long = 0
         Dim ClusterTime As Long = 0
@@ -475,8 +477,10 @@ ZaTo:
         Next f
 
         Parallel.ForEach(Of CGraph.CNode)(Graph.Nodes, Sub(Node As CGraph.CNode, LoopState As ParallelLoopState, Parameter As Long)
+#If DEBUG Then
                                                            Dim ParallelStopwatch As Stopwatch
                                                            ParallelStopwatch = Stopwatch.StartNew()
+#End If
                                                            Dim Connections = Graph.GetConnections(Node.Index)
                                                            For Each Connection In Connections
                                                                If Connection.NodeA = Connection.NodeB Then Continue For
@@ -507,14 +511,14 @@ ZaTo:
                                                                    Force(Node.Index).Y += LocalForce.Y
                                                                End SyncLock
                                                            Next Connection
+#If DEBUG Then
                                                            ParallelStopwatch.Stop()
                                                            System.Threading.Interlocked.Add(ConnectionsTime, ParallelStopwatch.ElapsedMilliseconds)
 
                                                            ParallelStopwatch = New Stopwatch()
                                                            ParallelStopwatch.Start()
-
+#End If
                                                            Dim RepulsiveLocalForce As PointF
-                                                           'Parallel.ForEach(Of CGraph.CNode)(Graph.Nodes, Sub(RepulsiveNode As CGraph.CNode, LoopStateRepulsive As ParallelLoopState, ParameterRepulsive As Long)
                                                            Dim RepulsiveNodeIndex As Integer
                                                            For RepulsiveNodeIndex = Node.Index + 1 To Graph.Nodes.Count - 1
                                                                Dim RepulsiveNode As CGraph.CNode = Graph.Nodes(RepulsiveNodeIndex)
@@ -540,10 +544,12 @@ ZaTo:
                                                                Force(Node.Index).X -= RepulsiveLocalForce.X
                                                                Force(Node.Index).Y -= RepulsiveLocalForce.Y
                                                            End SyncLock
+#If DEBUG Then
                                                            ParallelStopwatch.Stop()
                                                            System.Threading.Interlocked.Add(RepulsiveTime, ParallelStopwatch.ElapsedMilliseconds)
 
                                                            ParallelStopwatch = Stopwatch.StartNew()
+#End If
                                                            If Graph.Nodes.Count < 1000 Then
                                                                Dim OtherClusterNodeIndex As Integer
                                                                For OtherClusterNodeIndex = Node.Index + 1 To Graph.Nodes.Count - 1
@@ -568,19 +574,23 @@ ZaTo:
                                                                    End If
                                                                Next OtherClusterNodeIndex
                                                            End If
+#If DEBUG Then
                                                            ParallelStopwatch.Stop()
                                                            System.Threading.Interlocked.Add(ClusterTime, ParallelStopwatch.ElapsedMilliseconds)
+#End If
                                                        End Sub)
         For f = 0 To UBound(Force)
             Dim Node = Graph.GetNode(f)
             Node.DisplayProperties.Position.X += Force(f).X / Node.DisplayProperties.Size
             Node.DisplayProperties.Position.Y += Force(f).Y / Node.DisplayProperties.Size
         Next f
+#If DEBUG Then
         Stopwatch.Stop()
         Debug.WriteLine("Sort processing time: " + Trim(Str(Stopwatch.ElapsedMilliseconds)) + "ms")
         Debug.WriteLine("Connections time: " + Trim(Str(ConnectionsTime)) + "ms")
         Debug.WriteLine("Repulsive time: " + Trim(Str(RepulsiveTime)) + "ms")
         Debug.WriteLine("Cluster time: " + Trim(Str(ClusterTime)) + "ms")
+#End If
     End Sub
 
 
