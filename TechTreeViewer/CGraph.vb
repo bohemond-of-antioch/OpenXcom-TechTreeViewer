@@ -37,15 +37,24 @@ Public Class CGraph
             DisplayProperties.Highlighted = True
         End Sub
 
+        Public Sub ApplyTemplateProperties(Template As CPropertyTemplate)
+            For Each TemplateProperty In Template.Properties
+                For Each NodeProperty In Properties
+                    If NodeProperty.Key = TemplateProperty.Name Then
+                        GoTo ZaTo
+                    End If
+                Next NodeProperty
+                Properties.Add(New KeyValuePair(Of String, String)(TemplateProperty.Name, TemplateProperty.DefaultValue))
+ZaTo:
+                If TemplateProperty.Display AndAlso Not DisplayProperties.ShownProperties.Contains(TemplateProperty.Name) Then DisplayProperties.ShownProperties.Add(TemplateProperty.Name)
+            Next
+        End Sub
+
         Public Sub ApplyTemplate(Template As CPropertyTemplate)
             DisplayProperties.Size = Template.Size
             DisplayProperties.Color = Template.Color
             DisplayProperties.Decoration = Template.Decoration
-            For Each TemplateProperty In Template.Properties
-                Properties.Add(New KeyValuePair(Of String, String)(TemplateProperty.Name, TemplateProperty.DefaultValue))
-                If TemplateProperty.Display AndAlso Not DisplayProperties.ShownProperties.Contains(TemplateProperty.Name) Then DisplayProperties.ShownProperties.Add(TemplateProperty.Name)
-            Next
-
+            ApplyTemplateProperties(Template)
         End Sub
 
         Public Function GetProperty(Name As String) As String

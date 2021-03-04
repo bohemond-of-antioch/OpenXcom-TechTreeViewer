@@ -18,11 +18,11 @@ colors:
   connections:
     lookup: LightCyan
     dependencies: Blue
-    requires: Red
+    requires: Yellow
     #getOneFree: Green
     #getOneFreeProtected: Green
     #sequentialGetOneFree: Green
-    #unlocks: DarkGreen
+    #unlocks: Purple
   graph:
     darkenedAlpha: 20
     #background: White

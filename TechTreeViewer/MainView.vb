@@ -254,27 +254,34 @@ Public Class MainView
             End If
 
 
-            Dim LineMiddleX, LineMiddleY As Integer
-            LineMiddleX = (SegmentA.X + SegmentB.X) / 2
-            LineMiddleY = (SegmentA.Y + SegmentB.Y) / 2
+            If Connection.DisplayProperties.ShownProperties.Count > 0 Then
+                Dim LineMiddleX, LineMiddleY As Integer
+                LineMiddleX = (SegmentA.X + SegmentB.X) / 2
+                LineMiddleY = (SegmentA.Y + SegmentB.Y) / 2
 
-            Dim PrevTransform = e.Graphics.Transform
-            e.Graphics.TranslateTransform(LineMiddleX, LineMiddleY)
-            e.Graphics.RotateTransform(Angle * 180 / Math.PI)
-            e.Graphics.TranslateTransform(-LineMiddleX, -LineMiddleY)
-            Dim DisplayedProperty As Integer
-            DisplayedProperty = 0
-            For Each PropertyName As String In Connection.DisplayProperties.ShownProperties
-                For Each P In Connection.Properties
-                    If P.Key = PropertyName Then
-                        e.Graphics.DrawString(P.Value, Me.Font, Brushes.Black, New Rectangle(LineMiddleX - 250, LineMiddleY + 5 + DisplayedProperty * 15, 500, 50), CenteredStringFormat)
-                        'e.Graphics.DrawRectangle(Pens.Red, New Rectangle(LineMiddleX - 250, LineMiddleY + 5 + DisplayedProperty * 15, 500, 50))
-                        DisplayedProperty += 1
-                    End If
+                Dim PrevTransform = e.Graphics.Transform
+                e.Graphics.TranslateTransform(LineMiddleX, LineMiddleY)
+                e.Graphics.RotateTransform(Angle * 180 / Math.PI)
+                e.Graphics.TranslateTransform(-LineMiddleX, -LineMiddleY)
+                Dim DisplayedProperty As Integer
+                DisplayedProperty = 0
+                Dim TextBrush As Brush
+                If Connection.DisplayProperties.Highlighted Then
+                    TextBrush = NodeTextBrush
+                Else
+                    TextBrush = NodeDarkenedTextBrush
+                End If
+                For Each PropertyName As String In Connection.DisplayProperties.ShownProperties
+                    For Each P In Connection.Properties
+                        If P.Key = PropertyName Then
+                            e.Graphics.DrawString(P.Value, Me.Font, TextBrush, New Rectangle(LineMiddleX - 250, LineMiddleY + 5 + DisplayedProperty * 15, 500, 50), CenteredStringFormat)
+                            DisplayedProperty += 1
+                        End If
+                    Next
                 Next
-            Next
 
-            e.Graphics.Transform = PrevTransform
+                e.Graphics.Transform = PrevTransform
+            End If
         Next Connection
         Stopwatch.Stop()
         Debug.WriteLine("Paint connections processing time: " + Trim(Str(Stopwatch.ElapsedMilliseconds)) + "ms")
@@ -313,15 +320,15 @@ Public Class MainView
 
             Dim DisplayedProperty As Integer
             DisplayedProperty = 0
+            Dim TextBrush As Brush
+            If Node.DisplayProperties.Highlighted Then
+                TextBrush = NodeTextBrush
+            Else
+                TextBrush = NodeDarkenedTextBrush
+            End If
             For Each PropertyName As String In Node.DisplayProperties.ShownProperties
                 For Each P In Node.Properties
                     If P.Key = PropertyName Then
-                        Dim TextBrush As Brush
-                        If Node.DisplayProperties.Highlighted Then
-                            TextBrush = NodeTextBrush
-                        Else
-                            TextBrush = NodeDarkenedTextBrush
-                        End If
                         e.Graphics.DrawString(P.Value, Me.Font, TextBrush, New Rectangle(Node.DisplayProperties.Position.X - 250, Node.DisplayProperties.Position.Y + Node.DisplayProperties.Size + 5 + DisplayedProperty * 15, 500, 50), CenteredStringFormat)
                         DisplayedProperty += 1
                     End If

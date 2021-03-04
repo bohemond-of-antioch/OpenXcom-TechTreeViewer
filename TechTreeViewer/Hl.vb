@@ -189,6 +189,13 @@
                 ConnectionTemplate.Color = Color.Blue
                 ConnectionTemplate.Size = 1
                 ConnectionTemplate.Color = ParseColor(ConnectionColors.GetMapping(ConnectionType).GetValue())
+                If ConnectionType = "unlocks" Then
+                    Dim DefaultNameProperty = New CPropertyTemplate.SProperty()
+                    DefaultNameProperty.Name = "Type"
+                    DefaultNameProperty.DefaultValue = "U"
+                    DefaultNameProperty.Display = True
+                    ConnectionTemplate.Properties.Add(DefaultNameProperty)
+                End If
                 XComResearchConnectionTemplates.Add(ConnectionType, ConnectionTemplate)
             Next
         End If
@@ -238,8 +245,8 @@
 
         REM Now we do all node connections
         ImportProgress.SetProgressBar(AllResearch.Count, "Building graph connections")
-        For Each Research In AllResearch
-            For Each ConnectionType In XComResearchConnectionTemplates.Keys
+        For Each ConnectionType In XComResearchConnectionTemplates.Keys
+            For Each Research In AllResearch
                 Dim Connections As List(Of String)
                 Dim Reversed As Boolean
                 Select Case ConnectionType
@@ -253,9 +260,9 @@
                 End Select
 
                 CreateConnections(Research, Connections, XComResearchConnectionTemplates(ConnectionType), Reversed)
-            Next ConnectionType
+            Next Research
             ImportProgress.ImportProgressBar.PerformStep()
-        Next Research
+        Next ConnectionType
 
 
         REM Now colorize
@@ -380,7 +387,10 @@
                 NodeB = TargetNode.Index
             End If
             For c = 0 To UBound(Graph.Connections)
-                If Graph.Connections(c).NodeA = NodeA And Graph.Connections(c).NodeB = NodeB Then GoTo ZaTo
+                If Graph.Connections(c).NodeA = NodeA And Graph.Connections(c).NodeB = NodeB Then
+                    Graph.Connections(c).ApplyTemplateProperties(Template)
+                    GoTo ZaTo
+                End If
             Next c
             Graph.Connect(NodeA, NodeB, Template, False)
 ZaTo:
