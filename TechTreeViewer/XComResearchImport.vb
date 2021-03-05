@@ -18,8 +18,8 @@ Module XComResearchImport
 
     Private AllModNodes As List(Of YamlNode)
 
-    Public Function LoadResearch(GamePath As String, ActiveMods As List(Of String)) As List(Of CXComResearch)
-        LoadMods(GamePath, ActiveMods)
+    Public Function LoadResearch(GamePath As String, UserFolderPath As String, ActiveMods As List(Of String)) As List(Of CXComResearch)
+        LoadMods(GamePath, UserFolderPath, ActiveMods)
         ImportProgress.SetProgressBar(AllModNodes.Count, "Parsing research")
         Dim AllResearch As Dictionary(Of String, CXComResearch) = New Dictionary(Of String, CXComResearch)
         For Each ModRootNode In AllModNodes
@@ -73,9 +73,9 @@ Module XComResearchImport
         Return AllResearch.Values.ToList()
     End Function
 
-    Private Sub LoadMods(GamePath As String, ActiveMods As List(Of String))
+    Private Sub LoadMods(GamePath As String, UserFolderPath As String, ActiveMods As List(Of String))
         Dim StandardMods = Directory.GetDirectories(GamePath + "\standard")
-        Dim UserMods = Directory.GetDirectories(GamePath + "\user\mods")
+        Dim UserMods = Directory.GetDirectories(UserFolderPath + "\mods")
 
         Dim AllMods As List(Of String) = New List(Of String)
         AllMods.AddRange(StandardMods)

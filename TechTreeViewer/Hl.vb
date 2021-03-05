@@ -161,11 +161,18 @@
 
         Hl.Initialize()
         Dim GameConfiguration As YamlNode
+        Dim UserFolderPath As String = Path + "\User"
         Try
-            GameConfiguration = New YamlFileParser(Path + "\User\options.cfg").Parse()
+            GameConfiguration = New YamlFileParser(UserFolderPath + "\options.cfg").Parse()
         Catch ex As Exception
-            MsgBox("Game folder not recognized. Make sure options.cfg exists in User\", MsgBoxStyle.Exclamation, "Error during game mods parsing")
-            Exit Sub
+            Dim WindowsOXCEPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\OpenXCom"
+            Try
+                GameConfiguration = New YamlFileParser(WindowsOXCEPath + "\options.cfg").Parse()
+                UserFolderPath = WindowsOXCEPath
+            Catch ex2 As Exception
+                MsgBox("Game folder not recognized. Make sure options.cfg exists in User\ or in My Documents", MsgBoxStyle.Exclamation, "Error during game mods parsing")
+                Exit Sub
+            End Try
         End Try
         Dim Mods = GameConfiguration.GetMapping("mods")
         Dim ModsToLoad As New List(Of String)
@@ -176,7 +183,7 @@
             End If
         Next
         ImportProgress.Show(MainView)
-        Dim AllResearch = XComResearchImport.LoadResearch(Path, ModsToLoad)
+        Dim AllResearch = XComResearchImport.LoadResearch(Path, UserFolderPath, ModsToLoad)
 
         Dim CoordsRandomizer As Random = New Random
         ImportProgress.SetProgressBar(AllResearch.Count, "Building graph nodes")
