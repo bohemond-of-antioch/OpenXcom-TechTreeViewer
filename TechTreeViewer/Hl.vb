@@ -161,6 +161,10 @@
 
         Hl.Initialize()
         Dim GameConfiguration As YamlNode
+        If Not System.IO.Directory.Exists(Path + "\standard") Then
+            MsgBox("Game folder not recognized. Make sure to choose the game folder for import, the one where the \standard folder is, not the one in Documents.", MsgBoxStyle.Exclamation, "Error during game mods parsing")
+            Exit Sub
+        End If
         Dim UserFolderPath As String = Path + "\User"
         Try
             GameConfiguration = New YamlFileParser(UserFolderPath + "\options.cfg").Parse()
